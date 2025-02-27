@@ -31,23 +31,24 @@ A sophisticated, web-based application built with Dash Plotly for real-time vehi
 
 ## Screenshots
 
-### Home Page
+### Video selection window
 Upload video and model files to start the process.
 
-![Home Page](assets/home_page.png)
+![Select your Video](select_your_video.png)
 
+### Model Selection window
+
+![Select your Custom Model](model_select.png)
 ### Line Drawing Page
 Draw lines on the first frame to define counting regions.
 
-![Draw Lines](assets/draw_lines.png)
+![Draw Lines](enter_no_lines.png)
 
 ### Processing Page
 View annotated frames alongside a real-time dashboard.
 
-![Process Video](assets/process_video.png)
+![Realtime Dashboard](dashboard_localhost.png)
 
-## Installation
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/yourusername/VehicleCountingProject.git
-   cd VehicleCountingProject
+
+
+
