@@ -249,7 +249,9 @@ export default function App() {
                 </div>
             </div>
 
-            {/* Source Configuration Bar */}
+
+            {/* Source Configuration Bar — hidden on Services tab (services have their own source picker) */}
+            {activeTab !== "services" && (
             <div className="source-config-bar">
                 <div className="config-group">
                     <span className="config-label">Video Source Selection</span>
@@ -337,8 +339,10 @@ export default function App() {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* Collapsible Camera Coordinates Mapping Box */}
+
             {activeTab !== "logs" && activeTab !== "map" && activeTab !== "services" && (
                 <div className="glass-panel p-4 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between border border-indigo-500/20" style={{ borderRadius: "16px", padding: "16px 24px" }}>
                     <div className="flex items-center gap-3">
