@@ -256,7 +256,9 @@ def save_regions(
             camera_id=camera_id,
             label=r.label,
             type=r.type,
-            coordinates=r.coordinates
+            coordinates=r.coordinates,
+            latitude=r.latitude,
+            longitude=r.longitude
         )
         db.add(db_reg)
         db_regions.append(db_reg)

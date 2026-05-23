@@ -7,14 +7,16 @@ import AuthGate from "./components/AuthGate";
 import SystemLogs from "./components/SystemLogs";
 import Map3D from "./components/Map3D";
 import ServicesPage from "./components/ServicesPage";
-import { Upload, Video, ShieldCheck, Activity, BarChart3, Settings2, Terminal, LogOut, Map, Pin, Save, Layers } from "lucide-react";
+import SettingsPage from "./components/SettingsPage";
+import { Upload, Video, ShieldCheck, Activity, BarChart3, Settings2, Terminal, LogOut, Map, Pin, Save, Layers, Settings } from "lucide-react";
 
 const API_BASE = "http://localhost:8000/api/v1";
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem("aatms_token"));
     const [user, setUser] = useState(null);
-    const [activeTab, setActiveTab] = useState("monitor"); // "monitor", "roi", "analytics", "map", "logs"
+    const [activeTab, setActiveTab] = useState("monitor"); // "monitor", "analytics", "map", "services", "settings"
+    const [theme, setTheme] = useState(localStorage.getItem("aatms_theme") || "theme-blue");
     
     // Core configurations
     const [videoSource, setVideoSource] = useState("");
@@ -31,6 +33,12 @@ export default function App() {
     const [uploadedJobs, setUploadedJobs] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [selectedJob, setSelectedJob] = useState("");
+
+    // Apply theme to body
+    useEffect(() => {
+        document.body.className = theme;
+        localStorage.setItem("aatms_theme", theme);
+    }, [theme]);
 
     // Verify token & fetch profile
     useEffect(() => {
@@ -209,13 +217,6 @@ export default function App() {
                             Services
                         </button>
                         <button
-                            onClick={() => setActiveTab("roi")}
-                            className={`btn-tab ${activeTab === "roi" ? "active" : ""}`}
-                        >
-                            <Settings2 className="w-4 h-4" />
-                            ROI Config
-                        </button>
-                        <button
                             onClick={() => setActiveTab("analytics")}
                             className={`btn-tab ${activeTab === "analytics" ? "active" : ""}`}
                         >
@@ -228,13 +229,6 @@ export default function App() {
                         >
                             <Map className="w-4 h-4" />
                             3D Map
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("logs")}
-                            className={`btn-tab ${activeTab === "logs" ? "active" : ""}`}
-                        >
-                            <Terminal className="w-4 h-4" />
-                            Logs
                         </button>
                     </div>
 
@@ -250,8 +244,8 @@ export default function App() {
             </div>
 
 
-            {/* Source Configuration Bar — hidden on Services tab (services have their own source picker) */}
-            {activeTab !== "services" && (
+            {/* Source Configuration Bar — hidden on Services and Settings tabs */}
+            {activeTab !== "services" && activeTab !== "settings" && (
             <div className="source-config-bar">
                 <div className="config-group">
                     <span className="config-label">Video Source Selection</span>
@@ -343,7 +337,7 @@ export default function App() {
 
             {/* Collapsible Camera Coordinates Mapping Box */}
 
-            {activeTab !== "logs" && activeTab !== "map" && activeTab !== "services" && (
+            {activeTab !== "settings" && activeTab !== "map" && activeTab !== "services" && (
                 <div className="glass-panel p-4 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between border border-indigo-500/20" style={{ borderRadius: "16px", padding: "16px 24px" }}>
                     <div className="flex items-center gap-3">
                         <Pin className="w-5 h-5 text-indigo-400" />
@@ -413,14 +407,6 @@ export default function App() {
                     />
                 )}
 
-                {activeTab === "roi" && (
-                    <DrawingCanvas
-                        videoSource={videoSource}
-                        cameraId={cameraId}
-                        token={token}
-                    />
-                )}
-
                 {activeTab === "analytics" && (
                     <AnalyticsDashboard
                         cameraId={cameraId}
@@ -433,21 +419,36 @@ export default function App() {
                     />
                 )}
 
-                {activeTab === "logs" && (
-                    <SystemLogs
+                {activeTab === "settings" && (
+                    <SettingsPage
+                        theme={theme}
+                        setTheme={setTheme}
+                        user={user}
+                        handleLogout={handleLogout}
                         token={token}
+                        videoSource={videoSource}
+                        cameraId={cameraId}
                     />
                 )}
             </div>
             
             {/* Footer status bar */}
-            <div className="flex justify-between items-center mt-8 text-xs text-slate-500 border-t border-slate-900 pt-4">
+            <div className="flex justify-between items-center mt-8 text-xs text-slate-500 border-t border-slate-900 pt-4 pb-4 pl-14">
                 <span className="flex items-center gap-1">
                     <ShieldCheck className="w-4 h-4 text-indigo-500" />
                     Secure Local Instance • PostgreSQL Connected
                 </span>
                 <span>Active Camera ID: <span className="text-slate-400 font-semibold">{cameraId}</span></span>
             </div>
+
+            {/* Bottom Left Settings Button */}
+            <button 
+                className="settings-btn-fixed"
+                onClick={() => setActiveTab("settings")}
+                title="System Settings"
+            >
+                <Settings className="w-5 h-5" />
+            </button>
         </div>
     );
 }

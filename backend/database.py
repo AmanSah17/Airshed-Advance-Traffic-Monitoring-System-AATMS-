@@ -21,6 +21,8 @@ class Region(Base):
     label = Column(String, nullable=False)
     type = Column(String, nullable=False)  # "line" or "polygon"
     coordinates = Column(JSON, nullable=False)  # List of coordinates: [[x1, y1], [x2, y2], ...]
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class CrossingEvent(Base):
@@ -102,6 +104,8 @@ def init_db():
     with engine.connect() as conn:
         try:
             conn.execute(text("ALTER TABLE crossing_events ADD COLUMN IF NOT EXISTS region_label VARCHAR;"))
+            conn.execute(text("ALTER TABLE regions ADD COLUMN IF NOT EXISTS latitude FLOAT;"))
+            conn.execute(text("ALTER TABLE regions ADD COLUMN IF NOT EXISTS longitude FLOAT;"))
             conn.commit()
         except Exception as e:
             print(f"Migration error: {e}")

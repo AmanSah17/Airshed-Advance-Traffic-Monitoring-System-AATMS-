@@ -7,6 +7,8 @@ class RegionBase(BaseModel):
     label: str
     type: str  # "line" or "polygon"
     coordinates: List[List[float]]  # List of coordinates [[x, y], ...]
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class RegionCreate(RegionBase):
     pass

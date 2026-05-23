@@ -9,6 +9,7 @@ export default function SystemLogs({ token }) {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [expandedErrorId, setExpandedErrorId] = useState(null);
+    const [visibleCount, setVisibleCount] = useState(20);
 
     const fetchLogs = () => {
         setLoading(true);
@@ -56,7 +57,7 @@ export default function SystemLogs({ token }) {
             {/* Inner Tabs navigation */}
             <div className="flex gap-2 bg-slate-950/40 p-1 rounded-xl border border-slate-800 self-start">
                 <button
-                    onClick={() => { setSubTab("activity"); setLogs([]); }}
+                    onClick={() => { setSubTab("activity"); setLogs([]); setVisibleCount(20); }}
                     className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         subTab === "activity" ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
                     }`}
@@ -65,7 +66,7 @@ export default function SystemLogs({ token }) {
                     User Activity Logs
                 </button>
                 <button
-                    onClick={() => { setSubTab("errors"); setLogs([]); }}
+                    onClick={() => { setSubTab("errors"); setLogs([]); setVisibleCount(20); }}
                     className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         subTab === "errors" ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
                     }`}
@@ -74,7 +75,7 @@ export default function SystemLogs({ token }) {
                     Error Exceptions Log
                 </button>
                 <button
-                    onClick={() => { setSubTab("emails"); setLogs([]); }}
+                    onClick={() => { setSubTab("emails"); setLogs([]); setVisibleCount(20); }}
                     className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         subTab === "emails" ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
                     }`}
@@ -89,7 +90,7 @@ export default function SystemLogs({ token }) {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
                 </div>
             ) : (
-                <div className="table-container">
+                <div className="table-container" style={{ maxHeight: "500px", overflowY: "auto" }}>
                     {/* Activity Logs Table */}
                     {subTab === "activity" && (
                         <table className="data-table">
@@ -103,7 +104,7 @@ export default function SystemLogs({ token }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {logs.map((log) => (
+                                {logs.slice(0, visibleCount).map((log) => (
                                     <tr key={log.id}>
                                         <td className="font-mono text-slate-500">#{log.id}</td>
                                         <td className="font-bold text-white">{log.username}</td>
@@ -128,7 +129,7 @@ export default function SystemLogs({ token }) {
                     {/* Error Logs Table */}
                     {subTab === "errors" && (
                         <div className="flex flex-col divide-y divide-slate-850/30">
-                            {logs.map((err) => {
+                            {logs.slice(0, visibleCount).map((err) => {
                                 const isExpanded = expandedErrorId === err.id;
                                 return (
                                     <div key={err.id} className="p-4 hover:bg-slate-900/20">
@@ -174,7 +175,7 @@ export default function SystemLogs({ token }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {logs.map((mail) => (
+                                {logs.slice(0, visibleCount).map((mail) => (
                                     <tr key={mail.id}>
                                         <td className="font-semibold text-slate-300">{mail.to_email}</td>
                                         <td className="font-medium">{mail.subject}</td>
@@ -194,6 +195,17 @@ export default function SystemLogs({ token }) {
                                 )}
                             </tbody>
                         </table>
+                    )}
+                    
+                    {logs.length > visibleCount && (
+                        <div className="flex justify-center mt-4 mb-2">
+                            <button 
+                                onClick={() => setVisibleCount(v => v + 20)}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-colors"
+                            >
+                                Load More Logs...
+                            </button>
+                        </div>
                     )}
                 </div>
             )}

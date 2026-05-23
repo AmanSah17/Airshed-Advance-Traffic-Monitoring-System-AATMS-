@@ -17,8 +17,6 @@ const SERVICES = [
     accent: "#6366f1",
     accentBg: "rgba(99,102,241,0.1)",
     accentBorder: "rgba(99,102,241,0.3)",
-    tag: "Service 1",
-    tagColor: "#818cf8",
     badge: "LIVE",
     badgeColor: "#10b981",
     description: "Draw virtual tripwire lines across any lane or road segment. Each time a tracked vehicle's bottom-centre coordinate crosses a line, an IN or OUT event is recorded with vehicle class, track ID, confidence, and exact timestamp.",
@@ -40,8 +38,6 @@ const SERVICES = [
     accent: "#f59e0b",
     accentBg: "rgba(245,158,11,0.1)",
     accentBorder: "rgba(245,158,11,0.3)",
-    tag: "Service 2",
-    tagColor: "#fbbf24",
     badge: "LIVE",
     badgeColor: "#10b981",
     description: "Draw custom polygon zones over parking bays, intersections, queuing areas, or any region of interest. AATMS tracks the moment each vehicle enters or exits the zone, maintaining live occupancy counts.",
@@ -124,7 +120,7 @@ const SERVICES = [
 // ── Tech Stack badges ─────────────────────────────────────────────────────────
 const TECH_STACK = [
   { icon: Cpu,       label: "CUDA Accelerated",     detail: "NVIDIA GPU via PyTorch CUDA backend",          color: "#22c55e" },
-  { icon: Eye,       label: "Custom YOLO Model",     detail: "Trained on Indian vehicles + license plates",  color: "#6366f1" },
+  { icon: Eye,       label: "Custom Object Detection",detail: "Trained on 250K+ images from Indian roads",    color: "#6366f1" },
   { icon: GitBranch, label: "DeepSORT Tracker",      detail: "Numba-optimised CUDA DeepSORT for occlusion",  color: "#f59e0b" },
   { icon: Database,  label: "PostgreSQL Storage",    detail: "All events logged with timestamp & metadata",  color: "#06b6d4" },
   { icon: Server,    label: "FastAPI Backend",        detail: "Async WebSocket streaming, REST APIs",         color: "#ec4899" },
@@ -195,7 +191,7 @@ export default function ServicesPage({ token, availableModels, availableJobs, ca
                 {sidebarOpen && (
                   <span className="sidebar-item-label" style={active ? { color: svc.accent } : {}}>
                     {svc.label}
-                    <span className="sidebar-item-tag" style={{ color: svc.tagColor }}>{svc.tag}</span>
+                    {svc.tag && <span className="sidebar-item-tag" style={{ color: svc.tagColor }}>{svc.tag}</span>}
                   </span>
                 )}
               </button>
@@ -215,7 +211,7 @@ export default function ServicesPage({ token, availableModels, availableJobs, ca
                 {sidebarOpen && (
                   <span className="sidebar-item-label">
                     {svc.label}
-                    <span className="sidebar-item-tag" style={{ color: svc.tagColor }}>{svc.tag}</span>
+                    {svc.tag && <span className="sidebar-item-tag" style={{ color: svc.tagColor }}>{svc.tag}</span>}
                   </span>
                 )}
               </button>
@@ -310,7 +306,7 @@ export default function ServicesPage({ token, availableModels, availableJobs, ca
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="sdc-title">{svc.label}</h3>
-                          <span className="sdc-tag" style={{ background: svc.accent + "20", color: svc.tagColor, borderColor: svc.accentBorder }}>{svc.tag}</span>
+                          {svc.tag && <span className="sdc-tag" style={{ background: svc.accent + "20", color: svc.tagColor, borderColor: svc.accentBorder }}>{svc.tag}</span>}
                           <span className="sdc-live-badge">● LIVE</span>
                         </div>
                         <p className="sdc-desc">{svc.description}</p>
@@ -415,46 +411,13 @@ export default function ServicesPage({ token, availableModels, availableJobs, ca
         {/* ═══ ACTIVE SERVICE ═════════════════════════════════════════════ */}
         {activeService && currentService && (
           <>
-            {/* Service banner */}
-            <div className="service-info-banner"
-              style={{ borderColor: currentService.accentBorder, background: currentService.accentBg }}>
-              <div className="flex items-start gap-4">
-                <div className="service-banner-icon"
-                  style={{ background: `${currentService.accent}20`, border: `1px solid ${currentService.accentBorder}` }}>
-                  <Icon className="w-6 h-6" style={{ color: currentService.accent }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-base font-bold text-white">{currentService.label}</h2>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: `${currentService.accent}20`, color: currentService.tagColor, border: `1px solid ${currentService.accentBorder}` }}>
-                      {currentService.tag}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full">
-                      <Zap className="w-2.5 h-2.5" /> CUDA Accelerated
-                    </span>
-                    <button onClick={() => setActiveService(null)}
-                      className="ml-auto text-[10px] text-slate-500 hover:text-slate-300 flex items-center gap-1">
-                      <ChevronLeft className="w-3 h-3" /> Back to Overview
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1 max-w-3xl">{currentService.description}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {currentService.features.map(f => (
-                      <span key={f} className="text-[10px] font-medium text-slate-300 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700/50">{f}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Service component */}
             <div className="service-body">
               {activeService === "lines" && (
-                <LineCrossingService cameraId={cameraId} token={token} availableModels={availableModels} availableJobs={availableJobs} />
+                <LineCrossingService cameraId={cameraId} token={token} availableModels={availableModels} availableJobs={availableJobs} onBack={() => setActiveService(null)} />
               )}
               {activeService === "polygons" && (
-                <PolygonZoneService cameraId={cameraId} token={token} availableModels={availableModels} availableJobs={availableJobs} />
+                <PolygonZoneService cameraId={cameraId} token={token} availableModels={availableModels} availableJobs={availableJobs} onBack={() => setActiveService(null)} />
               )}
             </div>
           </>
