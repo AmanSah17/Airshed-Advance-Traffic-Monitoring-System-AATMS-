@@ -212,7 +212,7 @@ def get_first_frame(video_source: str):
     if not video_source:
         raise HTTPException(status_code=400, detail="Video source path is empty")
         
-    if not video_source.startswith("rtsp://") and not os.path.exists(video_source):
+    if not (video_source.startswith("rtsp://") or video_source.startswith("http://")) and not os.path.exists(video_source):
         possible_path = os.path.join(UPLOAD_DIR, video_source)
         if os.path.exists(possible_path):
             video_source = possible_path
@@ -533,7 +533,7 @@ async def websocket_endpoint(
     if not model_path:
         model_path = os.getenv("YOLO_MODEL_PATH", "yolov8n.pt")
 
-    if not video_source.startswith("rtsp://") and not os.path.exists(video_source):
+    if not (video_source.startswith("rtsp://") or video_source.startswith("http://")) and not os.path.exists(video_source):
         possible_path = os.path.join(UPLOAD_DIR, video_source)
         if os.path.exists(possible_path):
             video_source = possible_path

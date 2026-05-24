@@ -3,6 +3,9 @@ import numpy as np
 import base64
 import os
 from datetime import datetime
+import threading
+import time
+import math
 from ultralytics import YOLO
 import supervision as sv
 from shapely.geometry import Polygon as ShapelyPolygon, Point as ShapelyPoint
@@ -46,6 +49,56 @@ def get_bottom_center(bbox):
     Calculate lower bounding box centre: bbox = [x1, y1, x2, y2]
     """
     return ((bbox[0] + bbox[2]) / 2.0, bbox[3])
+
+
+class RTSPStreamReader:
+    """
+    A threaded stream reader that continuously grabs frames from an RTSP or HTTP stream.
+    This prevents OpenCV's internal buffer from piling up, ensuring the inference
+    engine always processes the most recent frame.
+    """
+    def __init__(self, src):
+        self.src = src
+        # Optimize OpenCV for low latency RTSP
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
+        self.cap = cv2.VideoCapture(self.src)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.ret, self.frame = self.cap.read()
+        self.running = True
+        
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        if not self.fps or self.fps <= 0 or math.isnan(self.fps):
+            self.fps = 30.0
+
+        self.thread = threading.Thread(target=self._update, daemon=True)
+        self.thread.start()
+
+    def _update(self):
+        while self.running:
+            if self.cap.isOpened():
+                ret, frame = self.cap.read()
+                if ret:
+                    self.ret = ret
+                    self.frame = frame
+                else:
+                    time.sleep(0.01)
+            else:
+                time.sleep(0.1)
+
+    def read(self):
+        return self.ret, self.frame
+
+    def get(self, propId):
+        return self.cap.get(propId)
+
+    def isOpened(self):
+        return self.cap.isOpened()
+
+    def release(self):
+        self.running = False
+        if self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+        self.cap.release()
 
 
 class VideoProcessor:
@@ -181,7 +234,12 @@ class VideoProcessor:
 
     # ─────────────────────────────────────────────────────────────────────────
     def process(self):
-        cap = cv2.VideoCapture(self.video_path)
+        if self.video_path.startswith("rtsp://") or self.video_path.startswith("http://"):
+            logger.info(f"Using threaded stream reader for network source: {self.video_path}")
+            cap = RTSPStreamReader(self.video_path)
+        else:
+            cap = cv2.VideoCapture(self.video_path)
+            
         if not cap.isOpened():
             logger.error(f"Failed to open video stream: {self.video_path}")
             return
