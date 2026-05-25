@@ -106,7 +106,7 @@ const SERVICES = [
     badge: "PLANNED",
     badgeColor: "#94a3b8",
     description: "Detect and read Indian vehicle license plates using our custom-trained two-stage pipeline: ALPR detector + OCR. Associates plate text with track ID for persistent identification.",
-    techDetails: "Stage 1: Custom YOLOv8 trained on Indian LP dataset detects plate bounding boxes. Stage 2: Plate ROI is passed to a fine-tuned TrOCR / CRNN for character recognition. Results linked to track IDs.",
+    techDetails: "Stage 1: Custom AATMS Edge AI Object Detection trained on Indian LP dataset detects plate bounding boxes. Stage 2: Plate ROI is passed to a fine-tuned TrOCR / CRNN for character recognition. Results linked to track IDs.",
     features: [
       "Indian plate format support (white/yellow/green)",
       "Multi-state plate formats",
@@ -120,8 +120,8 @@ const SERVICES = [
 // ── Tech Stack badges ─────────────────────────────────────────────────────────
 const TECH_STACK = [
   { icon: Cpu,       label: "CUDA Accelerated",     detail: "NVIDIA GPU via PyTorch CUDA backend",          color: "#22c55e" },
-  { icon: Eye,       label: "Custom Object Detection",detail: "Trained on 250K+ images from Indian roads",    color: "#6366f1" },
-  { icon: GitBranch, label: "DeepSORT Tracker",      detail: "Numba-optimised CUDA DeepSORT for occlusion",  color: "#f59e0b" },
+  { icon: Eye,       label: "AATMS Edge AI Detection",detail: "Trained on 250K+ images from Indian roads",    color: "#6366f1" },
+  { icon: GitBranch, label: "AATMS Advanced Tracker",      detail: "CUDA-optimised advanced spatial tracking",  color: "#f59e0b" },
   { icon: Database,  label: "PostgreSQL Storage",    detail: "All events logged with timestamp & metadata",  color: "#06b6d4" },
   { icon: Server,    label: "FastAPI Backend",        detail: "Async WebSocket streaming, REST APIs",         color: "#ec4899" },
   { icon: Layers,    label: "React + Vite Frontend", detail: "Real-time Konva canvas ROI editor",            color: "#84cc16" },
@@ -250,7 +250,7 @@ export default function ServicesPage({ token, availableModels, availableJobs, ca
               </h1>
               <p className="landing-hero-sub">
                 A fully local, privacy-first traffic analytics platform built on custom-trained Indian vehicle detection models,
-                CUDA-accelerated DeepSORT tracking, and real-time event logging to PostgreSQL.
+                CUDA-accelerated AATMS tracking, and real-time event logging to PostgreSQL.
                 No cloud. No latency. Full control.
               </p>
               <div className="landing-hero-chips">

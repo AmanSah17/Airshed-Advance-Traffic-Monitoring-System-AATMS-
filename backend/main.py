@@ -13,7 +13,7 @@ import math
 import hashlib
 
 from pydantic import BaseModel
-from database import init_db, get_db, Region, CrossingEvent, VideoJob, User, UserActivityLog, ErrorLog, SentEmail, SessionLocal, CameraSource
+from database import init_db, get_db, Region, CrossingEvent, VideoJob, User, UserActivityLog, ErrorLog, SentEmail, SessionLocal, CameraSource, EventRule, AlertLog
 from schemas import RegionCreate, RegionResponse, CrossingEventResponse, VideoJobResponse, UserRegister, UserLogin, UserResponse, TokenResponse, CameraSourceResponse
 from pipeline import VideoProcessor
 from auth import hash_password, verify_password, create_access_token, get_current_user
@@ -615,6 +615,40 @@ class CameraSourceCreate(BaseModel):
     latitude: float
     longitude: float
     video_url: Optional[str] = None
+
+class EventRuleCreate(BaseModel):
+    name: str
+    conditions: dict
+    email_alert: bool = False
+
+@app.get("/api/v1/rules")
+def get_rules(camera_id: str = "default", db: Session = Depends(get_db)):
+    return db.query(EventRule).filter(EventRule.camera_id == camera_id).all()
+
+@app.post("/api/v1/rules")
+def create_rule(rule: EventRuleCreate, camera_id: str = "default", db: Session = Depends(get_db)):
+    db_rule = EventRule(
+        camera_id=camera_id,
+        name=rule.name,
+        conditions=rule.conditions,
+        email_alert=rule.email_alert
+    )
+    db.add(db_rule)
+    db.commit()
+    db.refresh(db_rule)
+    return db_rule
+
+@app.delete("/api/v1/rules/{rule_id}")
+def delete_rule(rule_id: int, db: Session = Depends(get_db)):
+    rule = db.query(EventRule).filter(EventRule.id == rule_id).first()
+    if rule:
+        db.delete(rule)
+        db.commit()
+    return {"status": "success"}
+
+@app.get("/api/v1/alerts")
+def get_alerts(camera_id: str = "default", limit: int = 50, db: Session = Depends(get_db)):
+    return db.query(AlertLog).filter(AlertLog.camera_id == camera_id).order_by(AlertLog.timestamp.desc()).limit(limit).all()
 
 @app.get("/api/v1/analytics/heatmap")
 def get_analytics_heatmap(db: Session = Depends(get_db)):

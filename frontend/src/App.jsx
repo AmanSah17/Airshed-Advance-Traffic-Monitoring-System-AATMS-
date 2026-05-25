@@ -8,9 +8,21 @@ import SystemLogs from "./components/SystemLogs";
 import Map3D from "./components/Map3D";
 import ServicesPage from "./components/ServicesPage";
 import SettingsPage from "./components/SettingsPage";
-import { Upload, Video, ShieldCheck, Activity, BarChart3, Settings2, Terminal, LogOut, Map, Pin, Save, Layers, Settings } from "lucide-react";
+import AboutPage from "./components/AboutPage";
+import { Upload, Video, ShieldCheck, Activity, BarChart3, Settings2, Terminal, LogOut, Map, Pin, Save, Layers, Settings, Info } from "lucide-react";
 
 const API_BASE = "http://localhost:8000/api/v1";
+
+export const formatModelName = (name) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("quantized") || n.includes("int8")) return "AATMS Edge AI - Quantized";
+    if (n.includes("tflite")) return "AATMS Edge AI - TFLite";
+    if (n.includes("yolov8n") || n.includes("nano")) return "AATMS Edge AI - Nano";
+    if (n.includes("yolov8s") || n.includes("small")) return "AATMS Edge AI - Small";
+    if (n.includes("yolov8m") || n.includes("base")) return "AATMS Edge AI - Base";
+    if (n.includes("yolov8l") || n.includes("large")) return "AATMS Edge AI - Large";
+    return "AATMS Edge AI - Custom";
+};
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem("aatms_token"));
@@ -23,6 +35,10 @@ export default function App() {
     const [cameraId, setCameraId] = useState("default");
     const [yoloModel, setYoloModel] = useState("yolov8n.pt");
     const [trackerType, setTrackerType] = useState("deepsort"); // "deepsort", "bytetrack", "botsort"
+    
+    // Global Alerts State
+    const [globalAlerts, setGlobalAlerts] = useState([]);
+    const [showAlertsPanel, setShowAlertsPanel] = useState(true);
     
     // Camera coordinates mapping
     const [cameraName, setCameraName] = useState("AATMS Delhi Node");
@@ -112,6 +128,19 @@ export default function App() {
         }
     }, [token, cameraId]);
 
+    // Global Alerts Poller
+    useEffect(() => {
+        if (!token) return;
+        const fetchGlobalAlerts = () => {
+            axios.get(`${API_BASE}/alerts?camera_id=${cameraId}&limit=10`)
+                .then(res => setGlobalAlerts(res.data))
+                .catch(err => console.error("Error fetching global alerts:", err));
+        };
+        fetchGlobalAlerts();
+        const interval = setInterval(fetchGlobalAlerts, 3000);
+        return () => clearInterval(interval);
+    }, [token, cameraId]);
+
     // Save camera mapping coordinates to PostgreSQL
     const handleSaveCamera = () => {
         axios.post(`${API_BASE}/cameras`, {
@@ -135,7 +164,7 @@ export default function App() {
     const handleAuthSuccess = (newToken, newUser) => {
         setToken(newToken);
         setUser(newUser);
-        setActiveTab("monitor");
+        setActiveTab("about");
     };
 
     const handleLogout = () => {
@@ -182,7 +211,7 @@ export default function App() {
                 <div className="header-bar flex justify-center py-6">
                     <div className="text-center">
                         <h1 className="text-title">AATMS</h1>
-                        <p className="text-subtitle">Airshed Advanced Traffic Monitoring & Vehicle Counting System</p>
+                        <p className="text-subtitle">Ground-breaking Edge AI Solution for Smart City and Traffic Monitoring</p>
                     </div>
                 </div>
                 <AuthGate onAuthSuccess={handleAuthSuccess} />
@@ -196,11 +225,19 @@ export default function App() {
             <div className="header-bar">
                 <div>
                     <h1 className="text-title">AATMS</h1>
-                    <p className="text-subtitle">Welcome back, <span className="text-indigo-400 font-bold">@{user?.username}</span> • Local Dashboard Instance</p>
+                    <p className="text-subtitle">Welcome back, <span className="text-indigo-400 font-bold">@{user?.username}</span> • Ground-breaking Edge AI Solution for Smart City</p>
                 </div>
                 
                 <div className="flex items-center gap-4">
                     <div className="tab-nav">
+                        <button
+                            onClick={() => setActiveTab("about")}
+                            className={`btn-tab ${activeTab === "about" ? "active" : ""}`}
+                            style={activeTab === "about" ? { color: "#10b981", background: "rgba(16,185,129,0.1)" } : {}}
+                        >
+                            <Info className="w-4 h-4" />
+                            About AATMS
+                        </button>
                         <button
                             onClick={() => setActiveTab("monitor")}
                             className={`btn-tab ${activeTab === "monitor" ? "active" : ""}`}
@@ -288,7 +325,7 @@ export default function App() {
                         className="input-field"
                     >
                         {availableModels.map((m) => (
-                            <option key={m} value={m}>{m}</option>
+                            <option key={m} value={m}>{formatModelName(m)}</option>
                         ))}
                     </select>
                 </div>
@@ -300,9 +337,9 @@ export default function App() {
                         onChange={(e) => setTrackerType(e.target.value)}
                         className="input-field"
                     >
-                        <option value="deepsort">Custom DeepSORT (Numba)</option>
-                        <option value="bytetrack">ByteTrack (Ultralytics)</option>
-                        <option value="botsort">BoT-SORT (Ultralytics)</option>
+                        <option value="deepsort">AATMS Advanced Tracker (v1)</option>
+                        <option value="bytetrack">AATMS Fast Tracker (v2)</option>
+                        <option value="botsort">AATMS Accurate Tracker (v3)</option>
                     </select>
                 </div>
 
@@ -335,56 +372,12 @@ export default function App() {
             </div>
             )}
 
-            {/* Collapsible Camera Coordinates Mapping Box */}
-
-            {activeTab !== "settings" && activeTab !== "map" && activeTab !== "services" && (
-                <div className="glass-panel p-4 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between border border-indigo-500/20" style={{ borderRadius: "16px", padding: "16px 24px" }}>
-                    <div className="flex items-center gap-3">
-                        <Pin className="w-5 h-5 text-indigo-400" />
-                        <div>
-                            <h4 className="text-sm font-semibold text-slate-200">GIS 3D Mapping Settings</h4>
-                            <p className="text-[11px] text-slate-500">Configure map node coordinates for satellite view visualisations</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        <input
-                            type="text"
-                            placeholder="Camera Name"
-                            value={cameraName}
-                            onChange={(e) => setCameraName(e.target.value)}
-                            className="input-field"
-                            style={{ width: "160px", padding: "8px 12px", fontSize: "12px" }}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Latitude"
-                            value={cameraLat}
-                            onChange={(e) => setCameraLat(e.target.value)}
-                            className="input-field"
-                            style={{ width: "100px", padding: "8px 12px", fontSize: "12px", fontFamily: "monospace" }}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Longitude"
-                            value={cameraLng}
-                            onChange={(e) => setCameraLng(e.target.value)}
-                            className="input-field"
-                            style={{ width: "100px", padding: "8px 12px", fontSize: "12px", fontFamily: "monospace" }}
-                        />
-                        <button
-                            onClick={handleSaveCamera}
-                            className="btn btn-primary"
-                            style={{ padding: "8px 16px", fontSize: "12px" }}
-                        >
-                            <Save className="w-4 h-4" />
-                            Map Node
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {/* Main Tabs Content Rendering */}
-            <div className="main-content">
+            <div className="main-content" style={{ paddingBottom: "40px" }}>
+                {activeTab === "about" && (
+                    <AboutPage />
+                )}
+
                 {activeTab === "monitor" && (
                     <LiveMonitor
                         videoSource={videoSource}
@@ -431,9 +424,10 @@ export default function App() {
                     />
                 )}
             </div>
-            
+
+
             {/* Footer status bar */}
-            <div className="flex justify-between items-center mt-8 text-xs text-slate-500 border-t border-slate-900 pt-4 pb-4 pl-14">
+            <div className="flex justify-between items-center mt-8 text-xs text-slate-500 border-t border-slate-900 pt-4 pb-12 pl-14">
                 <span className="flex items-center gap-1">
                     <ShieldCheck className="w-4 h-4 text-indigo-500" />
                     Secure Local Instance • PostgreSQL Connected
@@ -449,6 +443,67 @@ export default function App() {
             >
                 <Settings className="w-5 h-5" />
             </button>
+
+            {/* Global Notification Panel Widget */}
+            {token && showAlertsPanel && (
+                <div className="fixed top-24 right-6 w-80 max-h-[60vh] flex flex-col z-50 bg-slate-900/90 backdrop-blur-md border border-red-500/30 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.15)] overflow-hidden transition-all duration-300">
+                    <div className="flex items-center justify-between p-3.5 border-b border-slate-800 bg-gradient-to-r from-red-500/10 to-transparent">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-6 h-6 rounded-lg bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+                                <Activity className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                            </div>
+                            <span className="text-[11px] font-bold text-slate-200 uppercase tracking-widest">Live Alerts</span>
+                            {globalAlerts.length > 0 && (
+                                <span className="bg-red-500/20 text-red-400 text-[9px] px-2 py-0.5 rounded-full font-bold border border-red-500/30">
+                                    {globalAlerts.length}
+                                </span>
+                            )}
+                        </div>
+                        <button onClick={() => setShowAlertsPanel(false)} className="text-slate-500 hover:text-slate-300 transition-colors">
+                            <span className="text-xl leading-none">&times;</span>
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2.5 custom-scrollbar">
+                        {globalAlerts.length === 0 ? (
+                            <div className="text-center py-8 text-slate-500 text-xs flex flex-col items-center gap-2">
+                                <ShieldCheck className="w-8 h-8 opacity-20" />
+                                No active security alerts detected.
+                            </div>
+                        ) : (
+                            globalAlerts.map((alert, idx) => (
+                                <div key={alert.id || idx} className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-red-500/40 transition-colors group">
+                                    <div className="flex items-start gap-2.5">
+                                        <div className="mt-0.5 flex-shrink-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                        <div>
+                                            <p className="text-[11px] font-medium text-slate-200 leading-relaxed">{alert.message}</p>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">
+                                                    {new Date(alert.timestamp).toLocaleTimeString()}
+                                                </p>
+                                                <p className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700">
+                                                    {alert.action_taken}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+            {!showAlertsPanel && token && (
+                <button onClick={() => setShowAlertsPanel(true)} className="fixed top-24 right-6 z-50 bg-slate-900 border border-slate-800 p-2.5 rounded-full shadow-lg hover:border-red-500/50 transition-colors group">
+                    <Activity className="w-5 h-5 text-red-500 group-hover:animate-pulse" />
+                </button>
+            )}
+            
+            {/* Global Footer */}
+            <div className="fixed bottom-0 left-0 right-0 p-2 bg-slate-950/80 backdrop-blur-sm border-t border-slate-800/60 z-50 text-center">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                    © 2026 Aman Sah. Exclusive Copyright to AATMS Software.
+                </p>
+            </div>
         </div>
     );
 }

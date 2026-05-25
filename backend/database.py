@@ -97,6 +97,28 @@ class CameraSource(Base):
     video_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class EventRule(Base):
+    __tablename__ = "event_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    camera_id = Column(String, default="default", index=True)
+    name = Column(String, nullable=False)
+    # Conditions format: {"class_name": "truck", "region_label": "zone 1"}
+    conditions = Column(JSON, nullable=False)
+    email_alert = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AlertLog(Base):
+    __tablename__ = "alert_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    rule_id = Column(Integer, nullable=True)
+    camera_id = Column(String, default="default", index=True)
+    message = Column(String, nullable=False)
+    event_data = Column(JSON, nullable=True)
+    action_taken = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     # Perform column migration

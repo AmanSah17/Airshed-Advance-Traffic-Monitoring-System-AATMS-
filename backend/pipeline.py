@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from database import CrossingEvent, Region
 from cache import cache
 from deepsort import DeepSORTTracker
+from kafka_producer import produce_traffic_event
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -223,14 +224,22 @@ class VideoProcessor:
         self.db.commit()
         cache.delete(f"analytics_summary_{self.camera_id}")
         logger.info(f"Event: {class_name}_{track_id} → {r_label} ({direction})")
-        return {
+        
+        event_payload = {
+            "camera_id": self.camera_id,
             "vehicle_id": f"{class_name}_{track_id}",
             "class_name": class_name,
             "direction": direction,
             "region_label": r_label,
             "track_id": track_id,
-            "timestamp": event_time.isoformat()
+            "timestamp": event_time.isoformat(),
+            "confidence": conf
         }
+        
+        # Publish to Kafka
+        produce_traffic_event(event_payload)
+        
+        return event_payload
 
     # ─────────────────────────────────────────────────────────────────────────
     def process(self):
