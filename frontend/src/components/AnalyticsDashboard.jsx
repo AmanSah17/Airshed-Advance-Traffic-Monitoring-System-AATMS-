@@ -556,7 +556,13 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       }
     });
 
-    return () => { setMapReady(false); map.remove(); };
+    return () => { 
+      setMapReady(false); 
+      if (deckOverlayRef.current) {
+        deckOverlayRef.current = null;
+      }
+      map.remove(); 
+    };
   }, [mapTheme, showHeatmap, showZones]);
 
   // ── Markers ───────────────────────────────────────────
