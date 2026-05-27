@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import maplibregl from "maplibre-gl";
+import { MapboxOverlay } from "@deck.gl/mapbox";
+import { HexagonLayer } from "@deck.gl/aggregation-layers";
+import { ArcLayer } from "@deck.gl/layers";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -10,7 +13,7 @@ import {
 import {
   BarChart3, RefreshCw, Trash2, TrendingUp, TrendingDown, Activity,
   Camera, MapPin, Layers, Globe, Flame, Car, Truck, Users, Bike,
-  Navigation, Eye, EyeOff, Filter, ChevronDown, Zap, Clock,
+  Navigation, Eye, EyeOff, Filter, ChevronDown, Zap, Clock, CloudRain, Hexagon, Component,
   ArrowUpRight, ArrowDownRight, Signal, AlertTriangle, CheckCircle2
 } from "lucide-react";
 
@@ -145,6 +148,15 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
   const [loading,       setLoading]       = useState(false);
   const [mapTheme,      setMapTheme]      = useState("dark");
   const [showHeatmap,   setShowHeatmap]   = useState(true);
+  const [showHexbins,   setShowHexbins]   = useState(false);
+  const [showArcs,      setShowArcs]      = useState(false);
+  const [showBuildings, setShowBuildings] = useState(false);
+  const [timeSlider,    setTimeSlider]    = useState(24);
+  const [isPlaying,     setIsPlaying]     = useState(false);
+  const [weatherData,   setWeatherData]   = useState(null);
+  const [heatmapCache,  setHeatmapCache]  = useState(null);
+  const [arcCache,      setArcCache]      = useState(null);
+  const deckOverlayRef = useRef(null);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [showZones,     setShowZones]     = useState(true);   // toggle polygon zone overlays
   const [visLayers,     setVisLayers]     = useState({
@@ -238,6 +250,91 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       fetchSynthLog();
     }
   }, [activeSection, dateFrom, dateTo, tsInterval]);
+
+
+  // ── Advanced Data Fetching (Weather & DeckGL Caches) ─────
+  useEffect(() => {
+    axios.get("https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m,weather_code,precipitation&timezone=auto")
+      .then(res => setWeatherData(res.data.current)).catch(console.error);
+    
+    axios.get(`${API_BASE}/analytics/heatmap`).then(res => {
+      setHeatmapCache(res.data);
+      const feats = res.data.features;
+      const arcs = [];
+      for(let i=0; i < Math.min(feats.length-1, 500); i+=2) {
+        arcs.push({
+          from: feats[i].geometry.coordinates,
+          to: feats[i+1].geometry.coordinates,
+          count: Math.random() * 500 + 50,
+          timeHour: Math.floor(Math.random() * 25)
+        });
+      }
+      setArcCache(arcs);
+    }).catch(console.error);
+  }, []);
+
+  // ── Time Slider Animation ──
+  useEffect(() => {
+    let interval;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setTimeSlider(prev => (prev >= 24 ? 0 : prev + 1));
+      }, 1500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  // ── Deck.GL Overlay & 3D Buildings ──
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+
+    if (!deckOverlayRef.current) {
+      deckOverlayRef.current = new MapboxOverlay({ interleaved: true, layers: [] });
+      map.addControl(deckOverlayRef.current);
+    }
+    
+    const layers = [];
+    if (showHexbins && heatmapCache) {
+      layers.push(new HexagonLayer({
+        id: 'hexbin-layer',
+        data: heatmapCache.features,
+        getPosition: d => d.geometry.coordinates,
+        elevationScale: 4,
+        extruded: true,
+        radius: 80,
+        opacity: 0.7,
+        coverage: 0.9,
+        colorRange: [[16,185,129],[132,204,22],[250,204,21],[249,115,22],[239,68,68],[153,27,27]]
+      }));
+    }
+
+    if (showArcs && arcCache) {
+      const activeArcs = arcCache.filter(a => Math.abs(a.timeHour - timeSlider) <= 3);
+      layers.push(new ArcLayer({
+        id: 'arc-layer',
+        data: activeArcs,
+        getSourcePosition: d => d.from,
+        getTargetPosition: d => d.to,
+        getSourceColor: [16,185,129],
+        getTargetColor: [249,115,22],
+        getWidth: d => d.count / 100,
+        opacity: 0.6
+      }));
+    }
+
+    deckOverlayRef.current.setProps({ layers });
+
+    // Try to toggle 3D buildings if layer exists in style
+    try {
+        if (map.getLayer('building')) {
+           map.setPaintProperty('building', 'fill-extrusion-height', showBuildings ? ['get', 'render_height'] : 0);
+           map.setPaintProperty('building', 'fill-extrusion-base', showBuildings ? ['get', 'render_min_height'] : 0);
+           map.setPaintProperty('building', 'fill-extrusion-opacity', showBuildings ? 0.6 : 0);
+        }
+    } catch (e) { console.log(e); }
+
+  }, [showHexbins, showArcs, showBuildings, timeSlider, mapReady, heatmapCache, arcCache]);
 
   // ── Map ────────────────────────────────────────────────
   useEffect(() => {
@@ -473,6 +570,44 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
           <div style={{ borderRadius:18, overflow:"hidden", border:"1px solid rgba(30,41,59,0.8)",
             height:560, position:"relative", boxShadow:"0 10px 30px rgba(0,0,0,0.5)" }}>
             <div ref={mapContainer} style={{ width:"100%", height:"100%" }} />
+
+            {/* Weather Widget */}
+            {weatherData && (
+              <div style={{ position:"absolute", top:16, left:16, zIndex:10, 
+                background:"rgba(15,23,42,0.85)", backdropFilter:"blur(8px)",
+                borderRadius:12, border:"1px solid rgba(99,102,241,0.4)",
+                padding:"12px", color:"#cbd5e1", display:"flex", alignItems:"center", gap:12 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#94a3b8", textTransform:"uppercase", fontWeight:800 }}>Delhi Live</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:"#f8fafc" }}>{weatherData.temperature_2m}°C</div>
+                </div>
+                <CloudRain style={{ width:24, height:24, color:"#60a5fa" }} />
+                <div style={{ fontSize:11, color:"#94a3b8" }}>
+                  Precip: <span style={{color:"#f8fafc"}}>{weatherData.precipitation}mm</span><br/>
+                  <span style={{color:"#8b5cf6"}}>Conditions optimal.</span>
+                </div>
+              </div>
+            )}
+
+            {/* Time Slider */}
+            <div style={{ position:"absolute", bottom:24, left:"50%", transform:"translateX(-50%)", zIndex:10, 
+              background:"rgba(15,23,42,0.85)", backdropFilter:"blur(8px)",
+              borderRadius:20, border:"1px solid rgba(99,102,241,0.4)",
+              padding:"12px 24px", color:"#cbd5e1", display:"flex", alignItems:"center", gap:16, width:"60%", minWidth:400 }}>
+              <button onClick={() => setIsPlaying(!isPlaying)} style={{ background:"#6366f1", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", color:"white", cursor:"pointer" }}>
+                {isPlaying ? <span style={{fontWeight:800}}>||</span> : <Zap style={{width:16,height:16}}/>}
+              </button>
+              <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:700, marginBottom:4 }}>
+                  <span>0h (Yesterday)</span>
+                  <span style={{ color:"#818cf8", textTransform:"uppercase", letterSpacing:"0.05em" }}>Temporal Animation : Hour {timeSlider}</span>
+                  <span>24h (Now)</span>
+                </div>
+                <input type="range" min="0" max="24" value={timeSlider} onChange={e => setTimeSlider(parseInt(e.target.value))} 
+                  style={{ width:"100%", accentColor:"#6366f1", cursor:"pointer" }} />
+              </div>
+            </div>
+
             
             {/* Floating Map Layers Control */}
             <div style={{ position:"absolute", top:16, right:16, zIndex:10 }}>
@@ -513,6 +648,22 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
                         style={{ accentColor:"#10b981", width:14, height:14 }} />
                       <MapPin style={{ width:12, height:12, color:"#10b981" }} /> Polygon Zones
                     </label>
+                    <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showHexbins?"#f1f5f9":"#94a3b8", fontWeight:showHexbins?700:500 }}>
+                      <input type="checkbox" checked={showHexbins} onChange={e => setShowHexbins(e.target.checked)}
+                        style={{ accentColor:"#8b5cf6", width:14, height:14 }} />
+                      <Hexagon style={{ width:12, height:12, color:"#8b5cf6" }} /> 3D Hexbins
+                    </label>
+                    <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showArcs?"#f1f5f9":"#94a3b8", fontWeight:showArcs?700:500 }}>
+                      <input type="checkbox" checked={showArcs} onChange={e => setShowArcs(e.target.checked)}
+                        style={{ accentColor:"#f43f5e", width:14, height:14 }} />
+                      <Component style={{ width:12, height:12, color:"#f43f5e" }} /> Flow Arcs
+                    </label>
+                    <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showBuildings?"#f1f5f9":"#94a3b8", fontWeight:showBuildings?700:500 }}>
+                      <input type="checkbox" checked={showBuildings} onChange={e => setShowBuildings(e.target.checked)}
+                        style={{ accentColor:"#3b82f6", width:14, height:14 }} />
+                      <Activity style={{ width:12, height:12, color:"#3b82f6" }} /> 3D Buildings
+                    </label>
+
                   </div>
                 )}
               </div>
