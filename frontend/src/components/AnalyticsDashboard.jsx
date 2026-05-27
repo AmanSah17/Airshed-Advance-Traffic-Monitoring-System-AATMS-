@@ -15,7 +15,7 @@ import {
   BarChart3, RefreshCw, Trash2, TrendingUp, TrendingDown, Activity,
   Camera, MapPin, Layers, Globe, Flame, Car, Truck, Users, Bike,
   Navigation, Eye, EyeOff, Filter, ChevronDown, Zap, Clock, CloudRain, Hexagon, Component, Route,
-  ArrowUpRight, ArrowDownRight, Signal, AlertTriangle, CheckCircle2
+  ArrowUpRight, ArrowDownRight, Signal, AlertTriangle, CheckCircle2, PanelRightClose, PanelRightOpen
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000/api/v1";
@@ -169,6 +169,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
   const [mapReady,      setMapReady]      = useState(false);
   const [nodesSummary,  setNodesSummary]  = useState([]);     // full per-node summary
   const [activeSection, setActiveSection] = useState("overview");
+  const [showAnalyticsPanel, setShowAnalyticsPanel] = useState(true);
   // ── Timeseries / density state ────────────────────────────
   const [dateFrom,      setDateFrom]      = useState("2026-05-26");
   const [dateTo,        setDateTo]        = useState("2026-05-27");
@@ -677,6 +678,13 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               {s.label}
             </button>
           ))}
+          <button onClick={() => setShowAnalyticsPanel(!showAnalyticsPanel)}
+            style={{ padding:"8px 14px", borderRadius:10, fontSize:12, fontWeight:700, cursor:"pointer",
+              border:"1px solid #1e293b", background:"rgba(30,41,59,0.5)", color:"#94a3b8",
+              display:"flex", alignItems:"center", gap:6, transition:"all 0.2s" }}>
+            {showAnalyticsPanel ? <PanelRightClose style={{width:13,height:13}}/> : <PanelRightOpen style={{width:13,height:13}}/>}
+            {showAnalyticsPanel ? "Hide Panel" : "Show Panel"}
+          </button>
           <button onClick={() => fetchSummary(selectedCam)} disabled={loading}
             style={{ padding:"8px 14px", borderRadius:10, fontSize:12, fontWeight:700, cursor:"pointer",
               border:"1px solid #1e293b", background:"rgba(30,41,59,0.5)", color:"#94a3b8",
@@ -689,8 +697,8 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
 
       {/* ── Split-Pane Master Container ─────────────────────────── */}
       <div style={{
-        flex:1, display:"grid", gridTemplateColumns:"62% 38%", gap:20, padding:"20px",
-        overflow:"hidden"
+        flex:1, display:"grid", gridTemplateColumns: showAnalyticsPanel ? "62% 38%" : "1fr", gap:20, padding:"20px",
+        overflow:"hidden", transition:"grid-template-columns 0.3s ease"
       }}>
 
         {/* ── LEFT PANE (MAP) ─────────────────────────────────── */}
@@ -821,8 +829,10 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
         </div>
 
         {/* ── RIGHT PANE (SCROLLABLE ANALYTICS) ──────────────── */}
-        <div style={{ display:"flex", flexDirection:"column", gap:16, height:"100%", 
-             overflowY:"auto", paddingRight:8, scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent" }}>
+        {showAnalyticsPanel && (
+          <div style={{ display:"flex", flexDirection:"column", gap:16, height:"100%", 
+             overflowY:"auto", paddingRight:8, scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent",
+             animation:"fadeIn 0.3s ease" }}>
 
           {/* Node sidebar */}
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -1329,11 +1339,15 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
 
         {/* ── BOTTOM SPACER ── */}
         <div style={{ height:20 }} />
-        </div> {/* Close RIGHT PANE */}
+        </div>
+        )} {/* Close conditional RIGHT PANE */}
       </div> {/* Close Master Container */}
 
       {/* spin keyframe via style tag */}
-      <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+      `}</style>
     </div>
   );
 }
