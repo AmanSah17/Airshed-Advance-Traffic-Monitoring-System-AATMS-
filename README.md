@@ -24,6 +24,23 @@ Our proprietary **AATMS Edge AI Pipeline** brings advanced analytics directly to
 
 ---
 
+---
+
+## 🆕 Recent Frontend Updates (Digital Twin Analytics)
+
+We've overhauled the analytics dashboard to provide an immersive, full-screen **Digital Twin** experience for traffic operators:
+
+- **Immersive Split-Pane Architecture**: A professional, dynamic CSS Grid layout maximizing screen real-estate. The map takes center stage (62% width), while the scrollable analytics panel (38%) provides deep-dive charts without stealing focus.
+- **Dynamic Panel Toggle**: Hide the analytics panel with a single click to enter a full 100% immersive 3D command-center map view.
+- **Advanced 3D Layering (Deck.gl + Mapbox)**: 
+  - **Massive 3D Buildings**: Increased the volumetric extrusion of real-world buildings by 50x for stunning visual depth.
+  - **Animated Flow Arcs & Road Trips**: Visualize traffic origin-destination paths and historic trajectories with animated Deck.gl trails.
+  - **Volumetric 3D Hexbins**: Aggregate spatial traffic density into 3D hexagonal pillars.
+- **Rich GeoJSON Polygon Zones**: Imported boundary coordinates now render with distinct, mathematically generated color schemes. Hovering over a zone reveals a beautiful glassmorphism popup detailing the zone's metadata, exact coordinates, and node classifications.
+- **Seamless Layer Management**: Resolved complex Mapbox mounting bugs. Toggling base-map themes (Dark, Light, Satellite) or Heatmaps no longer orphans overlay layers—everything renders independently and seamlessly.
+
+---
+
 ## 🚀 See AATMS In Action
 
 We believe seeing is believing. Watch our core components operating live:

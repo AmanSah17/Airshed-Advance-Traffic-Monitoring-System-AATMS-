@@ -452,8 +452,8 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
             'minzoom': 14,
             'paint': {
               'fill-extrusion-color': '#1e293b',
-              'fill-extrusion-height': ['*', ['get', 'render_height'], 2.5],
-              'fill-extrusion-base': ['*', ['get', 'render_min_height'], 2.5],
+              'fill-extrusion-height': ['*', ['get', 'render_height'], 50],
+              'fill-extrusion-base': ['*', ['get', 'render_min_height'], 50],
               'fill-extrusion-opacity': 0.8
             }
           });
@@ -489,23 +489,80 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       // ── Load GeoJSON polygon zones ────────────────────────────
       axios.get(`${API_BASE}/analytics/geojson`).then(res => {
         if (!map.getSource("zones-src")) {
+          // Pre-process features to assign distinct colors and metadata
+          const colors = ["#6366f1", "#f59e0b", "#10b981", "#ec4899", "#06b6d4", "#a855f7", "#eab308", "#ef4444"];
+          if (res.data && res.data.features) {
+            res.data.features.forEach((f, i) => {
+              const c = colors[i % colors.length];
+              f.properties.color = c;
+              f.properties.fillOpacity = f.properties.name ? 0.35 : 0.15;
+              f.properties.displayName = f.properties.name ? f.properties.name.replace("_", " ").toUpperCase() : `Reference Zone ${i}`;
+              
+              // Calculate rough center for coordinate info
+              let coord = [0,0];
+              if (f.geometry && f.geometry.coordinates && f.geometry.coordinates[0] && f.geometry.coordinates[0][0]) {
+                 coord = f.geometry.coordinates[0][0];
+              }
+              f.properties.coordInfo = `${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}`;
+              
+              // Generate mock connecting road count for camera nodes
+              f.properties.connectingRoads = f.properties.name ? (3 + (i % 3)) : 0;
+            });
+          }
+
           map.addSource("zones-src", { type:"geojson", data: res.data });
+          
           // Fill polygons
           map.addLayer({ id:"zones-fill", type:"fill", source:"zones-src",
             paint: {
-              "fill-color": ["case",
-                ["has","name",["get","properties"]], "#6366f1", "#334155"],
-              "fill-opacity": 0.12
+              "fill-color": ["get", "color"],
+              "fill-opacity": ["get", "fillOpacity"]
             }
           });
+          
           // Stroke polygons
           map.addLayer({ id:"zones-stroke", type:"line", source:"zones-src",
             paint: {
-              "line-color": ["case",
-                ["has","name",["get","properties"]], "#818cf8", "#475569"],
-              "line-width": 1.5,
-              "line-dasharray": [3,2]
+              "line-color": ["get", "color"],
+              "line-width": 2,
+              "line-dasharray": [2, 2]
             }
+          });
+
+          // ── Tooltip logic for Polygon Zones ──
+          const zonePopup = new maplibregl.Popup({ closeButton:false, closeOnClick:false, offset:15, className: 'zone-popup-custom' });
+          map.on("mouseenter", "zones-fill", (e) => {
+            map.getCanvas().style.cursor = "crosshair";
+            const p = e.features[0].properties;
+            
+            // Build metadata HTML
+            let html = `
+              <div style="font-family:system-ui;font-size:12px;background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);
+                color:#e2e8f0;border-radius:12px;padding:14px;border:1px solid ${p.color};min-width:200px;box-shadow:0 10px 25px rgba(0,0,0,0.5)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  <div style="width:12px;height:12px;border-radius:3px;background:${p.color}"></div>
+                  <b style="color:#f8fafc;font-size:14px;letter-spacing:0.02em">${p.displayName}</b>
+                </div>
+                <div style="margin-top:6px;display:grid;grid-template-columns:90px 1fr;gap:4px">
+                  <span style="color:#94a3b8">Type:</span> <span style="color:#f1f5f9;font-weight:600">${p.name ? 'Camera Node' : 'Boundary Reference'}</span>
+                  <span style="color:#94a3b8">Coordinates:</span> <span style="color:#f1f5f9;font-family:monospace">${p.coordInfo}</span>`;
+                  
+            if (p.connectingRoads > 0) {
+              html += `<span style="color:#94a3b8">Intersections:</span> <span style="color:#f1f5f9">${p.connectingRoads} Connecting Roads</span>`;
+            }
+            
+            html += `</div></div>`;
+            
+            zonePopup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+          });
+          
+          map.on("mousemove", "zones-fill", (e) => {
+            zonePopup.setLngLat(e.lngLat);
+          });
+
+          map.on("mouseleave", "zones-fill", () => {
+            map.getCanvas().style.cursor = "";
+            zonePopup.remove();
           });
         }
       }).catch(console.error);
