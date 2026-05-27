@@ -296,27 +296,28 @@ def get_analytics_summary(camera_id: str = "default", db: Session = Depends(get_
         
     logger.info(f"Cache MISS for key: {cache_key}. Executing SQL query reports...")
 
-    total_count = db.query(func.count(CrossingEvent.id)).filter(CrossingEvent.camera_id == camera_id).scalar()
-    
-    class_counts = db.query(
-        CrossingEvent.class_name, func.count(CrossingEvent.id)
-    ).filter(CrossingEvent.camera_id == camera_id).group_by(CrossingEvent.class_name).all()
-    
-    direction_counts = db.query(
-        CrossingEvent.direction, func.count(CrossingEvent.id)
-    ).filter(CrossingEvent.camera_id == camera_id).group_by(CrossingEvent.direction).all()
+    base_query = db.query(CrossingEvent)
+    if camera_id != "default":
+        base_query = base_query.filter(CrossingEvent.camera_id == camera_id)
 
-    recent_events = db.query(CrossingEvent).filter(
-        CrossingEvent.camera_id == camera_id
-    ).order_by(CrossingEvent.timestamp.desc()).limit(50).all()
+    total_count_q = db.query(func.count(CrossingEvent.id))
+    if camera_id != "default": total_count_q = total_count_q.filter(CrossingEvent.camera_id == camera_id)
+    total_count = total_count_q.scalar()
+    
+    class_counts_q = db.query(CrossingEvent.class_name, func.count(CrossingEvent.id))
+    if camera_id != "default": class_counts_q = class_counts_q.filter(CrossingEvent.camera_id == camera_id)
+    class_counts = class_counts_q.group_by(CrossingEvent.class_name).all()
+    
+    dir_counts_q = db.query(CrossingEvent.direction, func.count(CrossingEvent.id))
+    if camera_id != "default": dir_counts_q = dir_counts_q.filter(CrossingEvent.camera_id == camera_id)
+    direction_counts = dir_counts_q.group_by(CrossingEvent.direction).all()
+
+    recent_events = base_query.order_by(CrossingEvent.timestamp.desc()).limit(50).all()
 
     time_cutoff = datetime.utcnow() - timedelta(hours=24)
-    events_last_24h = db.query(
-        CrossingEvent.timestamp, CrossingEvent.class_name
-    ).filter(
-        CrossingEvent.camera_id == camera_id,
-        CrossingEvent.timestamp >= time_cutoff
-    ).all()
+    events_last_24h_q = db.query(CrossingEvent.timestamp, CrossingEvent.class_name).filter(CrossingEvent.timestamp >= time_cutoff)
+    if camera_id != "default": events_last_24h_q = events_last_24h_q.filter(CrossingEvent.camera_id == camera_id)
+    events_last_24h = events_last_24h_q.all()
     
     time_series = {}
     for event in events_last_24h:
