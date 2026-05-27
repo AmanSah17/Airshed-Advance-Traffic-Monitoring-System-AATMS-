@@ -298,9 +298,37 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       cams.forEach(c => sankeyNodes.push({ name: c.name + " (Origin)" }));
       cams.forEach(c => sankeyNodes.push({ name: c.name + " (Dest)" }));
 
+      const validLinks = Object.values(linksMap).filter(l => l.value > 0);
+      
+      // d3-sankey will crash if there are isolated nodes. 
+      // We must map the nodes and links so that ONLY connected nodes exist in the array.
+      const usedNodeIndices = new Set();
+      validLinks.forEach(l => {
+          usedNodeIndices.add(l.source);
+          usedNodeIndices.add(l.target);
+      });
+      
+      // Create a mapping from old index to new index
+      const oldToNewIndex = {};
+      const finalNodes = [];
+      let newIdx = 0;
+      for (let i = 0; i < sankeyNodes.length; i++) {
+          if (usedNodeIndices.has(i)) {
+              finalNodes.push(sankeyNodes[i]);
+              oldToNewIndex[i] = newIdx++;
+          }
+      }
+      
+      // Remap link indices
+      const finalLinks = validLinks.map(l => ({
+          source: oldToNewIndex[l.source],
+          target: oldToNewIndex[l.target],
+          value: l.value
+      }));
+
       setSankeyData({
-         nodes: sankeyNodes,
-         links: Object.values(linksMap).filter(l => l.value > 0)
+         nodes: finalNodes,
+         links: finalLinks
       });
 
       // Fetch OSRM Routes and synthesize exact street trips
@@ -423,8 +451,8 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
             'minzoom': 14,
             'paint': {
               'fill-extrusion-color': '#1e293b',
-              'fill-extrusion-height': ['get', 'render_height'],
-              'fill-extrusion-base': ['get', 'render_min_height'],
+              'fill-extrusion-height': ['*', ['get', 'render_height'], 2.5],
+              'fill-extrusion-base': ['*', ['get', 'render_min_height'], 2.5],
               'fill-extrusion-opacity': 0.8
             }
           });
@@ -615,7 +643,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
   return (
     <div style={{
       display:"flex", flexDirection:"column", gap:0,
-      height:"calc(100vh - 180px)", overflow:"hidden",
+      height:"calc(100vh - 60px)", margin: "10px 30px", overflow:"hidden",
       background:"rgba(2,6,23,0.5)", borderRadius:24,
       border:"1px solid rgba(30,41,59,0.8)"
     }}>
@@ -659,18 +687,18 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
         </div>
       </div>
 
-      {/* ── Scrollable Master Container ─────────────────────────── */}
+      {/* ── Split-Pane Master Container ─────────────────────────── */}
       <div style={{
-        flex:1, overflowY:"auto", overflowX:"hidden", padding:"20px 24px",
-        scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent"
+        flex:1, display:"grid", gridTemplateColumns:"62% 38%", gap:20, padding:"20px",
+        overflow:"hidden"
       }}>
 
-        
-        {/* ── HERO MAP SECTION ─────────────────────────────────── */}
-        <div style={{ marginBottom:24, display:"grid", gridTemplateColumns:"1fr 320px", gap:16 }}>
+        {/* ── LEFT PANE (MAP) ─────────────────────────────────── */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16, height:"100%", overflow:"hidden" }}>
+          
           {/* Map canvas */}
-          <div style={{ borderRadius:18, overflow:"hidden", border:"1px solid rgba(30,41,59,0.8)",
-            height:560, position:"relative", boxShadow:"0 10px 30px rgba(0,0,0,0.5)" }}>
+          <div style={{ flex:1, borderRadius:18, overflow:"hidden", border:"1px solid rgba(30,41,59,0.8)",
+            position:"relative", boxShadow:"0 10px 30px rgba(0,0,0,0.5)" }}>
             <div ref={mapContainer} style={{ width:"100%", height:"100%" }} />
 
             {/* Weather Widget */}
@@ -790,10 +818,14 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── RIGHT PANE (SCROLLABLE ANALYTICS) ──────────────── */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16, height:"100%", 
+             overflowY:"auto", paddingRight:8, scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent" }}>
 
           {/* Node sidebar */}
-          <div style={{ display:"flex", flexDirection:"column", gap:10, overflowY:"auto",
-            maxHeight:560, scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.2) transparent" }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase",
               letterSpacing:"0.08em", paddingBottom:8, borderBottom:"1px solid #1e293b", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span>Camera Nodes ({cameras.length})</span>
@@ -851,7 +883,6 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               );
             })}
           </div>
-        </div>
 
         {/* ── TOP STAT CARDS ─────────────────────────────────────── */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:14, marginBottom:20 }}>
@@ -889,8 +920,8 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
         {/* ── SECTION: OVERVIEW ─────────────────────────────────── */}
         {(activeSection === "overview" || activeSection === "density") && (
           <>
-            {/* Charts row */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:16 }}>
+            {/* Charts stack */}
+            <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:16 }}>
 
               {/* Bar: Class Breakdown */}
               <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)", padding:"18px 20px" }}>
@@ -1041,7 +1072,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
 
         {/* ── SECTION: MULTI-NODE COMPARISON ─────────────────────── */}
         {(activeSection === "overview" || activeSection === "nodes") && cameras.length > 1 && (
-          <div style={{ display:"grid", gridTemplateColumns:"1.2fr 0.8fr", gap:16, marginBottom:16 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:16 }}>
             <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)",
               padding:"18px 20px" }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
@@ -1073,18 +1104,24 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               </div>
               <div style={{ height:320, width:"100%" }}>
                 {sankeyData ? (
-                  <ResponsiveContainer>
-                    <Sankey
-                      data={sankeyData}
-                      node={{ fill:"#6366f1", stroke:"#312e81" }}
-                      link={{ stroke:"#4f46e5", strokeOpacity: 0.3 }}
-                      margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
-                    >
-                      <Tooltip 
-                        contentStyle={{ background:"#0f172a", border:"1px solid #1e293b", borderRadius:8, color:"#f8fafc" }} 
-                        itemStyle={{ color:"#e2e8f0" }}
-                      />
-                    </Sankey>
+                  <ResponsiveContainer width="100%" height="100%">
+                    {sankeyData && sankeyData.links && sankeyData.links.length > 0 ? (
+                      <Sankey
+                        data={sankeyData}
+                        node={{ fill:"#6366f1", stroke:"#312e81" }}
+                        link={{ stroke:"#4f46e5", strokeOpacity: 0.3 }}
+                        margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                      >
+                        <Tooltip 
+                          contentStyle={{ background:"#0f172a", border:"1px solid #1e293b", borderRadius:8, color:"#f8fafc" }} 
+                          itemStyle={{ color:"#e2e8f0" }}
+                        />
+                      </Sankey>
+                    ) : (
+                      <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:"#64748b" }}>
+                        Insufficient Data for Sankey
+                      </div>
+                    )}
                   </ResponsiveContainer>
                 ) : (
                   <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:"#64748b" }}>
@@ -1327,7 +1364,8 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
 
         {/* ── BOTTOM SPACER ── */}
         <div style={{ height:20 }} />
-      </div>
+        </div> {/* Close RIGHT PANE */}
+      </div> {/* Close Master Container */}
 
       {/* spin keyframe via style tag */}
       <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
