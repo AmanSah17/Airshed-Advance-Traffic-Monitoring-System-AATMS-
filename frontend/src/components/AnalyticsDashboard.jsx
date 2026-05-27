@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import maplibregl from "maplibre-gl";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import { HexagonLayer } from "@deck.gl/aggregation-layers";
-import { ArcLayer } from "@deck.gl/layers";
+import {  MapboxOverlay } from "@deck.gl/mapbox";
+import {  HexagonLayer } from "@deck.gl/aggregation-layers";
+import {  ArcLayer } from "@deck.gl/layers";
+import {  TripsLayer } from "@deck.gl/geo-layers";
 import "maplibre-gl/dist/maplibre-gl.css";
-import {
+import { 
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
-import {
+import { 
   BarChart3, RefreshCw, Trash2, TrendingUp, TrendingDown, Activity,
   Camera, MapPin, Layers, Globe, Flame, Car, Truck, Users, Bike,
-  Navigation, Eye, EyeOff, Filter, ChevronDown, Zap, Clock, CloudRain, Hexagon, Component,
+  Navigation, Eye, EyeOff, Filter, ChevronDown, Zap, Clock, CloudRain, Hexagon, Component, Route,
   ArrowUpRight, ArrowDownRight, Signal, AlertTriangle, CheckCircle2
 } from "lucide-react";
 
@@ -150,6 +151,9 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
   const [showHeatmap,   setShowHeatmap]   = useState(true);
   const [showHexbins,   setShowHexbins]   = useState(false);
   const [showArcs,      setShowArcs]      = useState(false);
+  const [showTrips,     setShowTrips]     = useState(false);
+  const [tripsCache,    setTripsCache]    = useState(null);
+  const [sankeyData,    setSankeyData]    = useState(null);
   const [showBuildings, setShowBuildings] = useState(false);
   const [timeSlider,    setTimeSlider]    = useState(24);
   const [isPlaying,     setIsPlaying]     = useState(false);
@@ -259,25 +263,72 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
     
     axios.get(`${API_BASE}/analytics/heatmap`).then(res => setHeatmapCache(res.data)).catch(console.error);
 
-    // Generate O-D Arcs between real camera nodes at 5-min intervals (288 steps)
-    axios.get(`${API_BASE}/cameras`).then(res => {
+    // Generate O-D Arcs, Sankey Data, and Trips between real camera nodes
+    axios.get(`${API_BASE}/cameras`).then(async res => {
       const cams = res.data;
       const arcs = [];
+      
+      const nodesMap = {};
+      cams.forEach((c, idx) => { nodesMap[c.name] = idx; });
+      const linksMap = {};
+
       for (let i = 0; i < cams.length; i++) {
         for (let j = 0; j < cams.length; j++) {
           if (i === j) continue;
-          // Generate realistic traffic flow pulses every 15 mins (3 steps)
+          let totalFlow = 0;
           for (let step = 0; step < 288; step += 3) {
+             const flow = Math.random() * 150 + 20;
+             totalFlow += flow;
              arcs.push({
+               sourceName: cams[i].name,
+               targetName: cams[j].name,
                from: [cams[i].longitude, cams[i].latitude],
                to: [cams[j].longitude, cams[j].latitude],
-               count: Math.random() * 150 + 20, // Flow volume
-               timeStep: step // 5-minute interval index
+               count: flow,
+               timeStep: step
              });
           }
+          linksMap[`${i}->${j}`] = { source: i, target: j, value: Math.round(totalFlow) };
         }
       }
       setArcCache(arcs);
+      setSankeyData({
+         nodes: cams.map(c => ({ name: c.name })),
+         links: Object.values(linksMap).filter(l => l.value > 0)
+      });
+
+      // Fetch OSRM Routes and synthesize exact street trips
+      try {
+        const generatedTrips = [];
+        for (let i = 0; i < cams.length; i++) {
+          for (let j = 0; j < cams.length; j++) {
+            if (i === j) continue;
+            // Fetch route
+            const routeRes = await axios.get(`http://router.project-osrm.org/route/v1/driving/${cams[i].longitude},${cams[i].latitude};${cams[j].longitude},${cams[j].latitude}?geometries=geojson`);
+            const pathCoords = routeRes.data.routes[0]?.geometry?.coordinates;
+            if (pathCoords && pathCoords.length > 1) {
+              // Generate 50 trips along this path distributed across the day
+              for(let t=0; t<50; t++) {
+                 const startTime = Math.floor(Math.random() * 287); // random 5-min interval
+                 const timestamps = [];
+                 // Assume each segment takes 2 units of time (10 minutes)
+                 let currTime = startTime;
+                 for(let k=0; k<pathCoords.length; k++) {
+                   timestamps.push(currTime);
+                   currTime += 0.5; // slow movement
+                 }
+                 generatedTrips.push({
+                    vendor: t % 2 === 0 ? 0 : 1, // Color differentiation
+                    path: pathCoords,
+                    timestamps: timestamps
+                 });
+              }
+            }
+          }
+        }
+        setTripsCache(generatedTrips);
+      } catch (err) { console.error("OSRM failed", err); }
+
     }).catch(console.error);
   }, []);
 
@@ -333,6 +384,23 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       }));
     }
 
+        
+    if (showTrips && tripsCache) {
+      layers.push(new TripsLayer({
+        id: 'trips-layer',
+        data: tripsCache,
+        getPath: d => d.path,
+        getTimestamps: d => d.timestamps,
+        getColor: d => (d.vendor === 0 ? [253, 128, 93] : [23, 184, 190]),
+        opacity: 0.8,
+        widthMinPixels: 4,
+        rounded: true,
+        trailLength: 5,
+        currentTime: timeSlider,
+        shadowEnabled: false
+      }));
+    }
+    
     deckOverlayRef.current.setProps({ layers });
 
     // Robust 3D Buildings integration
@@ -362,7 +430,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       }
     }
 
-  }, [showHexbins, showArcs, showBuildings, timeSlider, mapReady, heatmapCache, arcCache]);
+  }, [showHexbins, showArcs, showBuildings, timeSlider, mapReady, heatmapCache, arcCache, tripsCache, showTrips]);
 
   // ── Map ────────────────────────────────────────────────
   useEffect(() => {
@@ -688,6 +756,11 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
                         style={{ accentColor:"#f43f5e", width:14, height:14 }} />
                       <Component style={{ width:12, height:12, color:"#f43f5e" }} /> Flow Arcs
                     </label>
+                    <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showTrips?"#f1f5f9":"#94a3b8", fontWeight:showTrips?700:500 }}>
+                      <input type="checkbox" checked={showTrips} onChange={e => setShowTrips(e.target.checked)}
+                        style={{ accentColor:"#06b6d4", width:14, height:14 }} />
+                      <Route style={{ width:12, height:12, color:"#06b6d4" }} /> Road Trips
+                    </label>
                     <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showBuildings?"#f1f5f9":"#94a3b8", fontWeight:showBuildings?700:500 }}>
                       <input type="checkbox" checked={showBuildings} onChange={e => setShowBuildings(e.target.checked)}
                         style={{ accentColor:"#3b82f6", width:14, height:14 }} />
@@ -962,12 +1035,13 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
 
         {/* ── SECTION: MULTI-NODE COMPARISON ─────────────────────── */}
         {(activeSection === "overview" || activeSection === "nodes") && cameras.length > 1 && (
-          <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)",
-            padding:"18px 20px", marginBottom:16 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
-              <Signal style={{ width:15, height:15, color:"#f59e0b" }} />
-              <span style={{ fontSize:12, fontWeight:700, color:"#cbd5e1" }}>Multi-Node Traffic Comparison</span>
-            </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1.2fr 0.8fr", gap:16, marginBottom:16 }}>
+            <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)",
+              padding:"18px 20px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                <Signal style={{ width:15, height:15, color:"#f59e0b" }} />
+                <span style={{ fontSize:12, fontWeight:700, color:"#cbd5e1" }}>Multi-Node Traffic Comparison</span>
+              </div>
             <div style={{ height:220 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={nodeComparisonData} margin={{ top:4, right:8, left:-20, bottom:4 }}>
@@ -980,7 +1054,38 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
                   <Bar dataKey="IN"    name="IN"    fill="#10b981" radius={[4,4,0,0]} />
                   <Bar dataKey="OUT"   name="OUT"   fill="#f59e0b" radius={[4,4,0,0]} />
                 </BarChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Sankey Flow Diagram */}
+            <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)",
+              padding:"18px 20px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                <Component style={{ width:15, height:15, color:"#10b981" }} />
+                <span style={{ fontSize:12, fontWeight:700, color:"#cbd5e1" }}>Daily Flow Distribution (Sankey)</span>
+              </div>
+              <div style={{ height:320, width:"100%" }}>
+                {sankeyData ? (
+                  <ResponsiveContainer>
+                    <Sankey
+                      data={sankeyData}
+                      node={{ fill:"#6366f1", stroke:"#312e81" }}
+                      link={{ stroke:"#4f46e5", strokeOpacity: 0.3 }}
+                      margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                    >
+                      <Tooltip 
+                        contentStyle={{ background:"#0f172a", border:"1px solid #1e293b", borderRadius:8, color:"#f8fafc" }} 
+                        itemStyle={{ color:"#e2e8f0" }}
+                      />
+                    </Sankey>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:"#64748b" }}>
+                    Generating Flow Analytics...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
