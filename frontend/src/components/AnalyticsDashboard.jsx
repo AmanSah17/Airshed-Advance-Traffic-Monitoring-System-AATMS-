@@ -1095,41 +1095,6 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               </div>
             </div>
 
-            {/* Sankey Flow Diagram */}
-            <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)",
-              padding:"18px 20px" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
-                <Component style={{ width:15, height:15, color:"#10b981" }} />
-                <span style={{ fontSize:12, fontWeight:700, color:"#cbd5e1" }}>Daily Flow Distribution (Sankey)</span>
-              </div>
-              <div style={{ height:320, width:"100%" }}>
-                {sankeyData ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    {sankeyData && sankeyData.links && sankeyData.links.length > 0 ? (
-                      <Sankey
-                        data={sankeyData}
-                        node={{ fill:"#6366f1", stroke:"#312e81" }}
-                        link={{ stroke:"#4f46e5", strokeOpacity: 0.3 }}
-                        margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
-                      >
-                        <Tooltip 
-                          contentStyle={{ background:"#0f172a", border:"1px solid #1e293b", borderRadius:8, color:"#f8fafc" }} 
-                          itemStyle={{ color:"#e2e8f0" }}
-                        />
-                      </Sankey>
-                    ) : (
-                      <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:"#64748b" }}>
-                        Insufficient Data for Sankey
-                      </div>
-                    )}
-                  </ResponsiveContainer>
-                ) : (
-                  <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:"#64748b" }}>
-                    Generating Flow Analytics...
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
 
