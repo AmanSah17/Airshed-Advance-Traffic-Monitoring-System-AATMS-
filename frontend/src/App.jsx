@@ -5,11 +5,10 @@ import LiveMonitor from "./components/LiveMonitor";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import AuthGate from "./components/AuthGate";
 import SystemLogs from "./components/SystemLogs";
-import Map3D from "./components/Map3D";
 import ServicesPage from "./components/ServicesPage";
 import SettingsPage from "./components/SettingsPage";
 import AboutPage from "./components/AboutPage";
-import { Upload, Video, ShieldCheck, Activity, BarChart3, Settings2, Terminal, LogOut, Map, Pin, Save, Layers, Settings, Info } from "lucide-react";
+import { Upload, ShieldCheck, Activity, BarChart3, LogOut, Layers, Settings, Info } from "lucide-react";
 
 const API_BASE = "http://localhost:8000/api/v1";
 
@@ -27,7 +26,7 @@ export const formatModelName = (name) => {
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem("aatms_token"));
     const [user, setUser] = useState(null);
-    const [activeTab, setActiveTab] = useState("monitor"); // "monitor", "analytics", "map", "services", "settings"
+    const [activeTab, setActiveTab] = useState("monitor"); // "monitor", "analytics", "services", "settings"
     const [theme, setTheme] = useState(localStorage.getItem("aatms_theme") || "theme-blue");
     
     // Core configurations
@@ -260,13 +259,6 @@ export default function App() {
                             <BarChart3 className="w-4 h-4" />
                             Analytics
                         </button>
-                        <button
-                            onClick={() => setActiveTab("map")}
-                            className={`btn-tab ${activeTab === "map" ? "active" : ""}`}
-                        >
-                            <Map className="w-4 h-4" />
-                            3D Map
-                        </button>
                     </div>
 
                     <button
@@ -281,93 +273,37 @@ export default function App() {
             </div>
 
 
-            {/* Source Configuration Bar — hidden on Services and Settings tabs */}
-            {activeTab !== "services" && activeTab !== "settings" && (
+            {/* Compact source bar — only shown on monitor tab */}
+            {activeTab === "monitor" && (
             <div className="source-config-bar">
                 <div className="config-group">
-                    <span className="config-label">Video Source Selection</span>
+                    <span className="config-label">Video Source</span>
                     <select
                         value={selectedJob}
-                        onChange={(e) => {
-                            setSelectedJob(e.target.value);
-                            setVideoSource(e.target.value);
-                        }}
+                        onChange={(e) => { setSelectedJob(e.target.value); setVideoSource(e.target.value); }}
                         className="input-field"
                     >
-                        <option value="">-- Choose an uploaded file or enter RTSP --</option>
+                        <option value="">-- Select uploaded file or RTSP --</option>
                         {uploadedJobs.map((job) => (
-                            <option key={job.id} value={job.filepath}>
-                                {job.filename} ({job.status})
-                            </option>
+                            <option key={job.id} value={job.filepath}>{job.filename} ({job.status})</option>
                         ))}
                     </select>
                 </div>
-
                 <div className="config-group">
-                    <span className="config-label">Or RTSP Stream URL</span>
-                    <input
-                        type="text"
-                        placeholder="rtsp://192.168.1.100/stream"
+                    <span className="config-label">RTSP Stream URL</span>
+                    <input type="text" placeholder="rtsp://192.168.1.100/stream"
                         value={videoSource.startsWith("rtsp://") ? videoSource : ""}
-                        onChange={(e) => {
-                            setVideoSource(e.target.value);
-                            setSelectedJob("");
-                        }}
-                        className="input-field"
-                    />
+                        onChange={(e) => { setVideoSource(e.target.value); setSelectedJob(""); }}
+                        className="input-field" />
                 </div>
-
                 <div className="config-group">
-                    <span className="config-label">Model Selection</span>
-                    <select
-                        value={yoloModel}
-                        onChange={(e) => setYoloModel(e.target.value)}
-                        className="input-field"
-                    >
-                        {availableModels.map((m) => (
-                            <option key={m} value={m}>{formatModelName(m)}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="config-group">
-                    <span className="config-label">Tracking Association</span>
-                    <select
-                        value={trackerType}
-                        onChange={(e) => setTrackerType(e.target.value)}
-                        className="input-field"
-                    >
-                        <option value="deepsort">AATMS Advanced Tracker (v1)</option>
-                        <option value="bytetrack">AATMS Fast Tracker (v2)</option>
-                        <option value="botsort">AATMS Accurate Tracker (v3)</option>
-                    </select>
-                </div>
-
-                <div className="config-group">
-                    <span className="config-label">Upload local .mp4</span>
-                    <div className="file-upload-wrapper">
-                        <label className="file-upload-btn">
-                            {uploading ? (
-                                <span className="flex items-center gap-1.5 justify-center">
-                                    <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-indigo-400"></span>
-                                    Uploading...
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1.5 justify-center">
-                                    <Upload className="w-4 h-4" />
-                                    Choose Video
-                                </span>
-                            )}
-                            <input
-                                type="file"
-                                accept="video/*"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                                style={{ display: "none" }}
-                                disabled={uploading}
-                            />
-                        </label>
-                    </div>
+                    <span className="config-label">Upload Video</span>
+                    <label className="file-upload-btn" style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                        <Upload style={{ width:14, height:14 }} />
+                        {uploading ? "Uploading..." : "Choose File"}
+                        <input type="file" accept="video/*" onChange={handleFileUpload}
+                            style={{ display:"none" }} disabled={uploading} />
+                    </label>
                 </div>
             </div>
             )}
@@ -406,11 +342,6 @@ export default function App() {
                     />
                 )}
 
-                {activeTab === "map" && (
-                    <Map3D
-                        activeCameraId={cameraId}
-                    />
-                )}
 
                 {activeTab === "settings" && (
                     <SettingsPage

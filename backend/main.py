@@ -693,6 +693,31 @@ def get_analytics_heatmap(db: Session = Depends(get_db)):
         "features": features
     }
 
+@app.get("/api/v1/analytics/nodes")
+def get_all_nodes_analytics(db: Session = Depends(get_db)):
+    """Returns per-node analytics summary for all registered camera sources."""
+    cameras = db.query(CameraSource).all()
+    result = []
+    for cam in cameras:
+        total = db.query(func.count(CrossingEvent.id)).filter(CrossingEvent.camera_id == cam.id).scalar()
+        class_counts = db.query(
+            CrossingEvent.class_name, func.count(CrossingEvent.id)
+        ).filter(CrossingEvent.camera_id == cam.id).group_by(CrossingEvent.class_name).all()
+        direction_counts = db.query(
+            CrossingEvent.direction, func.count(CrossingEvent.id)
+        ).filter(CrossingEvent.camera_id == cam.id).group_by(CrossingEvent.direction).all()
+        result.append({
+            "camera_id": cam.id,
+            "name": cam.name,
+            "latitude": cam.latitude,
+            "longitude": cam.longitude,
+            "total_vehicles": total,
+            "class_distribution": {c[0]: c[1] for c in class_counts},
+            "direction_distribution": {d[0]: d[1] for d in direction_counts},
+        })
+    return result
+
+
 @app.get("/api/v1/models")
 def get_available_models():
     models_dir = r"D:\gemma4\AATMS\backend\models"
@@ -735,3 +760,116 @@ def save_camera(camera: CameraSourceCreate, db: Session = Depends(get_db), curre
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.get("/api/v1/analytics/geojson")
+def get_nodes_geojson():
+    """Serves the full GeoJSON polygon boundaries for all AATMS monitoring nodes."""
+    import os, json
+    geojson_path = os.path.join(os.path.dirname(__file__), "nodes.geojson")
+    if not os.path.exists(geojson_path):
+        return {"type": "FeatureCollection", "features": []}
+    with open(geojson_path, "r") as f:
+        data = json.load(f)
+    return data
+
+@app.get("/api/v1/analytics/nodes_summary")
+def get_nodes_summary(db: Session = Depends(get_db)):
+    """Returns comprehensive per-node summary including class breakdown, direction, recent events."""
+    cameras = db.query(CameraSource).all()
+    result = []
+    for cam in cameras:
+        total = db.query(func.count(CrossingEvent.id)).filter(CrossingEvent.camera_id == cam.id).scalar()
+        class_counts = db.query(
+            CrossingEvent.class_name, func.count(CrossingEvent.id)
+        ).filter(CrossingEvent.camera_id == cam.id).group_by(CrossingEvent.class_name).all()
+        direction_counts = db.query(
+            CrossingEvent.direction, func.count(CrossingEvent.id)
+        ).filter(CrossingEvent.camera_id == cam.id).group_by(CrossingEvent.direction).all()
+        # Last 5 events for this node
+        recent = db.query(CrossingEvent).filter(
+            CrossingEvent.camera_id == cam.id
+        ).order_by(CrossingEvent.timestamp.desc()).limit(5).all()
+        result.append({
+            "camera_id": cam.id,
+            "name": cam.name,
+            "latitude": cam.latitude,
+            "longitude": cam.longitude,
+            "total_vehicles": total,
+            "class_distribution": {c[0]: c[1] for c in class_counts},
+            "direction_distribution": {d[0]: d[1] for d in direction_counts},
+            "recent_events": [
+                {"id": e.id, "class_name": e.class_name, "direction": e.direction,
+                 "confidence": e.confidence, "timestamp": e.timestamp.isoformat()}
+                for e in recent
+            ]
+        })
+    return result
+
+@app.get("/api/v1/analytics/timeseries_multinode")
+def get_timeseries_multinode(
+    date_from: str = Query("2026-05-26"),
+    date_to:   str = Query("2026-05-27"),
+    interval:  str = Query("hour"),   # hour | day
+    db: Session = Depends(get_db)
+):
+    """
+    Returns hourly (or daily) timeseries traffic counts per node for the given date window.
+    Used by the Digital Twin dashboard for the 2-day synthetic analysis.
+    """
+    try:
+        dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+        dt_to   = datetime.strptime(date_to,   "%Y-%m-%d") + timedelta(days=1)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    trunc_fn = "hour" if interval == "hour" else "day"
+
+    rows = db.execute(text(f"""
+        SELECT
+            camera_id,
+            date_trunc('{trunc_fn}', timestamp) AS bucket,
+            class_name,
+            direction,
+            COUNT(*) AS cnt
+        FROM crossing_events
+        WHERE timestamp >= :dt_from AND timestamp < :dt_to
+          AND camera_id NOT IN ('default')
+        GROUP BY camera_id, bucket, class_name, direction
+        ORDER BY camera_id, bucket
+    """), {"dt_from": dt_from, "dt_to": dt_to}).fetchall()
+
+    # Structure: { node_id: { bucket_str: { class: {IN:n,OUT:n}, total: n } } }
+    result = {}
+    for row in rows:
+        nid = row[0]
+        bucket = row[1].isoformat() if hasattr(row[1], 'isoformat') else str(row[1])
+        cls    = row[2]
+        dirn   = row[3]
+        cnt    = row[4]
+
+        if nid not in result:
+            result[nid] = {}
+        if bucket not in result[nid]:
+            result[nid][bucket] = {"bucket": bucket, "total": 0, "IN": 0, "OUT": 0}
+        result[nid][bucket]["total"] += cnt
+        result[nid][bucket][dirn]    = result[nid][bucket].get(dirn, 0) + cnt
+        result[nid][bucket][cls]     = result[nid][bucket].get(cls, 0) + cnt
+
+    # Flatten to list per node
+    output = []
+    for nid, buckets in result.items():
+        output.append({
+            "camera_id": nid,
+            "timeseries": sorted(buckets.values(), key=lambda x: x["bucket"])
+        })
+    return output
+
+@app.get("/api/v1/analytics/synthesis_log")
+def get_synthesis_log():
+    """Returns the synthetic data generation log for transparency and analytics."""
+    import os, json
+    log_path = os.path.join(os.path.dirname(__file__), "synth_data_log.json")
+    if not os.path.exists(log_path):
+        return {"error": "Synthesis log not found"}
+    with open(log_path, "r") as f:
+        return json.load(f)

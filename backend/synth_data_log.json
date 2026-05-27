@@ -1,0 +1,784 @@
+{
+  "version": "v2",
+  "generated_at": "2026-05-28T02:58:48.272921",
+  "grand_total_target": 103600,
+  "date_window": [
+    "2026-05-26",
+    "2026-05-27"
+  ],
+  "class_distribution": {
+    "car": 0.333,
+    "heavy-duty-truck": 0.115,
+    "motor-bike": 0.115,
+    "auto": 0.11,
+    "truck": 0.1,
+    "scooty": 0.065,
+    "motorcycle": 0.055,
+    "bus": 0.04,
+    "small-truck": 0.032,
+    "e-rickshaw(toto)": 0.015,
+    "person": 0.012,
+    "vikram-auto": 0.006,
+    "bicycle": 0.002
+  },
+  "methodology": {
+    "scale": "5x-8x vs v1 (10,200-14,500 records per node)",
+    "class_balance": "car:33%, non-car classes at 0.30-0.40x of car count",
+    "direction_split": "IN 54% / OUT 46%",
+    "confidence": "Beta(1.8,3.5) per class, range 0.14-0.94",
+    "timestamps": "Delhi hourly profile (dual peak: 8-9am, 5-6pm)",
+    "region_labels": "8 zones per node (lines + polygons)"
+  },
+  "nodes": {
+    "node_0": {
+      "records_generated": 14500,
+      "class_balance": {
+        "truck": {
+          "count": 1407,
+          "ratio_to_car": 0.295
+        },
+        "car": {
+          "count": 4765,
+          "ratio_to_car": 1.0
+        },
+        "auto": {
+          "count": 1577,
+          "ratio_to_car": 0.331
+        },
+        "heavy-duty-truck": {
+          "count": 1761,
+          "ratio_to_car": 0.37
+        },
+        "scooty": {
+          "count": 961,
+          "ratio_to_car": 0.202
+        },
+        "motor-bike": {
+          "count": 1690,
+          "ratio_to_car": 0.355
+        },
+        "motorcycle": {
+          "count": 812,
+          "ratio_to_car": 0.17
+        },
+        "person": {
+          "count": 182,
+          "ratio_to_car": 0.038
+        },
+        "small-truck": {
+          "count": 459,
+          "ratio_to_car": 0.096
+        },
+        "bus": {
+          "count": 572,
+          "ratio_to_car": 0.12
+        },
+        "vikram-auto": {
+          "count": 88,
+          "ratio_to_car": 0.018
+        },
+        "e-rickshaw(toto)": {
+          "count": 198,
+          "ratio_to_car": 0.042
+        },
+        "bicycle": {
+          "count": 28,
+          "ratio_to_car": 0.006
+        }
+      },
+      "direction_split": {
+        "IN": 7883,
+        "OUT": 6617
+      },
+      "region_breakdown": {
+        "ITO_signal_zone": 1014,
+        "ITO_crossing_S": 1590,
+        "ITO_median_cross": 891,
+        "ITO_up_1": 4028,
+        "ITO_crossing_N": 2020,
+        "ITO_flyover": 733,
+        "ITO_polygon_A": 1275,
+        "ITO_down_1": 2949
+      },
+      "day_distribution": {
+        "2026-05-26": 7685,
+        "2026-05-27": 6815
+      },
+      "track_id_range": [
+        22427,
+        29429
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:00:50.463653",
+        "2026-05-27T23:59:33.898547"
+      ],
+      "avg_confidence": 0.5066
+    },
+    "node_1": {
+      "records_generated": 12000,
+      "class_balance": {
+        "motor-bike": {
+          "count": 1448,
+          "ratio_to_car": 0.365
+        },
+        "auto": {
+          "count": 1303,
+          "ratio_to_car": 0.329
+        },
+        "motorcycle": {
+          "count": 696,
+          "ratio_to_car": 0.175
+        },
+        "car": {
+          "count": 3966,
+          "ratio_to_car": 1.0
+        },
+        "heavy-duty-truck": {
+          "count": 1390,
+          "ratio_to_car": 0.35
+        },
+        "scooty": {
+          "count": 742,
+          "ratio_to_car": 0.187
+        },
+        "e-rickshaw(toto)": {
+          "count": 183,
+          "ratio_to_car": 0.046
+        },
+        "bus": {
+          "count": 498,
+          "ratio_to_car": 0.126
+        },
+        "truck": {
+          "count": 1190,
+          "ratio_to_car": 0.3
+        },
+        "small-truck": {
+          "count": 354,
+          "ratio_to_car": 0.089
+        },
+        "person": {
+          "count": 129,
+          "ratio_to_car": 0.033
+        },
+        "vikram-auto": {
+          "count": 66,
+          "ratio_to_car": 0.017
+        },
+        "bicycle": {
+          "count": 35,
+          "ratio_to_car": 0.009
+        }
+      },
+      "direction_split": {
+        "IN": 6430,
+        "OUT": 5570
+      },
+      "region_breakdown": {
+        "KG_entry_line": 3191,
+        "KG_exit_line": 2855,
+        "KG_far-1": 760,
+        "KG_polygon_east": 1769,
+        "KG_polygon_west": 1531,
+        "KG_bus_bay": 342,
+        "KG_near-1": 982,
+        "KG_pedestrian_zone": 570
+      },
+      "day_distribution": {
+        "2026-05-26": 6360,
+        "2026-05-27": 5640
+      },
+      "track_id_range": [
+        38260,
+        41572
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:00:40.443804",
+        "2026-05-27T23:59:24.378125"
+      ],
+      "avg_confidence": 0.5057
+    },
+    "node_2": {
+      "records_generated": 13200,
+      "class_balance": {
+        "motorcycle": {
+          "count": 673,
+          "ratio_to_car": 0.151
+        },
+        "motor-bike": {
+          "count": 1462,
+          "ratio_to_car": 0.328
+        },
+        "small-truck": {
+          "count": 416,
+          "ratio_to_car": 0.093
+        },
+        "heavy-duty-truck": {
+          "count": 1556,
+          "ratio_to_car": 0.349
+        },
+        "person": {
+          "count": 160,
+          "ratio_to_car": 0.036
+        },
+        "car": {
+          "count": 4464,
+          "ratio_to_car": 1.0
+        },
+        "truck": {
+          "count": 1281,
+          "ratio_to_car": 0.287
+        },
+        "auto": {
+          "count": 1405,
+          "ratio_to_car": 0.315
+        },
+        "bus": {
+          "count": 562,
+          "ratio_to_car": 0.126
+        },
+        "scooty": {
+          "count": 896,
+          "ratio_to_car": 0.201
+        },
+        "vikram-auto": {
+          "count": 77,
+          "ratio_to_car": 0.017
+        },
+        "e-rickshaw(toto)": {
+          "count": 212,
+          "ratio_to_car": 0.047
+        },
+        "bicycle": {
+          "count": 36,
+          "ratio_to_car": 0.008
+        }
+      },
+      "direction_split": {
+        "IN": 7098,
+        "OUT": 6102
+      },
+      "region_breakdown": {
+        "CC_lane_2": 920,
+        "CC_polygon_inner": 2224,
+        "CC_down1": 2886,
+        "CC_market_zone": 532,
+        "CC_lane_1": 1023,
+        "CC_up_1": 3613,
+        "CC_metro_exit": 265,
+        "CC_polygon_outer": 1737
+      },
+      "day_distribution": {
+        "2026-05-26": 6996,
+        "2026-05-27": 6204
+      },
+      "track_id_range": [
+        51026,
+        56445
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:00:43.724424",
+        "2026-05-27T23:58:46.297849"
+      ],
+      "avg_confidence": 0.5051
+    },
+    "node_3": {
+      "records_generated": 11000,
+      "class_balance": {
+        "bus": {
+          "count": 458,
+          "ratio_to_car": 0.124
+        },
+        "scooty": {
+          "count": 674,
+          "ratio_to_car": 0.183
+        },
+        "car": {
+          "count": 3691,
+          "ratio_to_car": 1.0
+        },
+        "heavy-duty-truck": {
+          "count": 1240,
+          "ratio_to_car": 0.336
+        },
+        "truck": {
+          "count": 1087,
+          "ratio_to_car": 0.295
+        },
+        "auto": {
+          "count": 1231,
+          "ratio_to_car": 0.334
+        },
+        "motor-bike": {
+          "count": 1278,
+          "ratio_to_car": 0.346
+        },
+        "motorcycle": {
+          "count": 601,
+          "ratio_to_car": 0.163
+        },
+        "small-truck": {
+          "count": 348,
+          "ratio_to_car": 0.094
+        },
+        "vikram-auto": {
+          "count": 70,
+          "ratio_to_car": 0.019
+        },
+        "person": {
+          "count": 114,
+          "ratio_to_car": 0.031
+        },
+        "bicycle": {
+          "count": 28,
+          "ratio_to_car": 0.008
+        },
+        "e-rickshaw(toto)": {
+          "count": 180,
+          "ratio_to_car": 0.049
+        }
+      },
+      "direction_split": {
+        "IN": 5981,
+        "OUT": 5019
+      },
+      "region_breakdown": {
+        "SPM_region_1_up": 2721,
+        "SPM_gyr": 1668,
+        "SPM_cgh": 1120,
+        "SPM_region_2_down": 2200,
+        "SPM_left_turn": 667,
+        "SPM_gju": 1415,
+        "SPM_crossing": 781,
+        "SPM_right_turn": 428
+      },
+      "day_distribution": {
+        "2026-05-26": 5830,
+        "2026-05-27": 5170
+      },
+      "track_id_range": [
+        61512,
+        69589
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:00:49.263932",
+        "2026-05-27T23:57:11.559588"
+      ],
+      "avg_confidence": 0.5029
+    },
+    "node_4": {
+      "records_generated": 10500,
+      "class_balance": {
+        "car": {
+          "count": 3570,
+          "ratio_to_car": 1.0
+        },
+        "scooty": {
+          "count": 679,
+          "ratio_to_car": 0.19
+        },
+        "motorcycle": {
+          "count": 597,
+          "ratio_to_car": 0.167
+        },
+        "heavy-duty-truck": {
+          "count": 1189,
+          "ratio_to_car": 0.333
+        },
+        "truck": {
+          "count": 1072,
+          "ratio_to_car": 0.3
+        },
+        "person": {
+          "count": 130,
+          "ratio_to_car": 0.036
+        },
+        "motor-bike": {
+          "count": 1190,
+          "ratio_to_car": 0.333
+        },
+        "e-rickshaw(toto)": {
+          "count": 160,
+          "ratio_to_car": 0.045
+        },
+        "auto": {
+          "count": 1129,
+          "ratio_to_car": 0.316
+        },
+        "small-truck": {
+          "count": 315,
+          "ratio_to_car": 0.088
+        },
+        "vikram-auto": {
+          "count": 66,
+          "ratio_to_car": 0.018
+        },
+        "bus": {
+          "count": 385,
+          "ratio_to_car": 0.108
+        },
+        "bicycle": {
+          "count": 18,
+          "ratio_to_car": 0.005
+        }
+      },
+      "direction_split": {
+        "IN": 5679,
+        "OUT": 4821
+      },
+      "region_breakdown": {
+        "SHY_zone_east": 742,
+        "SHY_polygon_A": 1725,
+        "SHY_polygon_B": 1383,
+        "SHY_NH_node": 806,
+        "SHY_down_1": 2265,
+        "SHY_up_1": 2804,
+        "SHY_divider": 342,
+        "SHY_service_rd": 433
+      },
+      "day_distribution": {
+        "2026-05-26": 5565,
+        "2026-05-27": 4935
+      },
+      "track_id_range": [
+        72888,
+        81204
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:01:17.057240",
+        "2026-05-27T23:59:12.984812"
+      ],
+      "avg_confidence": 0.5053
+    },
+    "node_7": {
+      "records_generated": 11800,
+      "class_balance": {
+        "small-truck": {
+          "count": 362,
+          "ratio_to_car": 0.093
+        },
+        "auto": {
+          "count": 1295,
+          "ratio_to_car": 0.333
+        },
+        "heavy-duty-truck": {
+          "count": 1348,
+          "ratio_to_car": 0.346
+        },
+        "car": {
+          "count": 3891,
+          "ratio_to_car": 1.0
+        },
+        "scooty": {
+          "count": 772,
+          "ratio_to_car": 0.198
+        },
+        "motorcycle": {
+          "count": 642,
+          "ratio_to_car": 0.165
+        },
+        "person": {
+          "count": 147,
+          "ratio_to_car": 0.038
+        },
+        "truck": {
+          "count": 1182,
+          "ratio_to_car": 0.304
+        },
+        "e-rickshaw(toto)": {
+          "count": 202,
+          "ratio_to_car": 0.052
+        },
+        "motor-bike": {
+          "count": 1390,
+          "ratio_to_car": 0.357
+        },
+        "bus": {
+          "count": 479,
+          "ratio_to_car": 0.123
+        },
+        "vikram-auto": {
+          "count": 67,
+          "ratio_to_car": 0.017
+        },
+        "bicycle": {
+          "count": 23,
+          "ratio_to_car": 0.006
+        }
+      },
+      "direction_split": {
+        "IN": 6329,
+        "OUT": 5471
+      },
+      "region_breakdown": {
+        "DG_line_1": 900,
+        "DG_up_1": 3292,
+        "DG_polygon_N": 1937,
+        "DG_down1": 2535,
+        "DG_line_2": 793,
+        "DG_gate_exit": 357,
+        "DG_polygon_S": 1421,
+        "DG_gate_entry": 565
+      },
+      "day_distribution": {
+        "2026-05-26": 6254,
+        "2026-05-27": 5546
+      },
+      "track_id_range": [
+        88415,
+        90413
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:04:29.270006",
+        "2026-05-27T23:58:30.125202"
+      ],
+      "avg_confidence": 0.504
+    },
+    "ref_zone_0": {
+      "records_generated": 10200,
+      "class_balance": {
+        "auto": {
+          "count": 1182,
+          "ratio_to_car": 0.354
+        },
+        "heavy-duty-truck": {
+          "count": 1148,
+          "ratio_to_car": 0.344
+        },
+        "car": {
+          "count": 3340,
+          "ratio_to_car": 1.0
+        },
+        "motor-bike": {
+          "count": 1148,
+          "ratio_to_car": 0.344
+        },
+        "e-rickshaw(toto)": {
+          "count": 190,
+          "ratio_to_car": 0.057
+        },
+        "small-truck": {
+          "count": 317,
+          "ratio_to_car": 0.095
+        },
+        "truck": {
+          "count": 999,
+          "ratio_to_car": 0.299
+        },
+        "bus": {
+          "count": 388,
+          "ratio_to_car": 0.116
+        },
+        "motorcycle": {
+          "count": 622,
+          "ratio_to_car": 0.186
+        },
+        "vikram-auto": {
+          "count": 50,
+          "ratio_to_car": 0.015
+        },
+        "scooty": {
+          "count": 680,
+          "ratio_to_car": 0.204
+        },
+        "person": {
+          "count": 115,
+          "ratio_to_car": 0.034
+        },
+        "bicycle": {
+          "count": 21,
+          "ratio_to_car": 0.006
+        }
+      },
+      "direction_split": {
+        "IN": 5480,
+        "OUT": 4720
+      },
+      "region_breakdown": {
+        "RZ0_polygon_A": 3056,
+        "RZ0_line_1": 2529,
+        "RZ0_zone_B": 808,
+        "RZ0_far": 1330,
+        "RZ0_zone_C": 606,
+        "RZ0_near": 1871
+      },
+      "day_distribution": {
+        "2026-05-26": 5406,
+        "2026-05-27": 4794
+      },
+      "track_id_range": [
+        98210,
+        101491
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:01:05.866722",
+        "2026-05-27T23:58:41.129420"
+      ],
+      "avg_confidence": 0.5027
+    },
+    "ref_zone_1": {
+      "records_generated": 10200,
+      "class_balance": {
+        "car": {
+          "count": 3417,
+          "ratio_to_car": 1.0
+        },
+        "small-truck": {
+          "count": 344,
+          "ratio_to_car": 0.101
+        },
+        "truck": {
+          "count": 1049,
+          "ratio_to_car": 0.307
+        },
+        "motor-bike": {
+          "count": 1121,
+          "ratio_to_car": 0.328
+        },
+        "scooty": {
+          "count": 663,
+          "ratio_to_car": 0.194
+        },
+        "heavy-duty-truck": {
+          "count": 1173,
+          "ratio_to_car": 0.343
+        },
+        "motorcycle": {
+          "count": 542,
+          "ratio_to_car": 0.159
+        },
+        "bus": {
+          "count": 404,
+          "ratio_to_car": 0.118
+        },
+        "auto": {
+          "count": 1126,
+          "ratio_to_car": 0.33
+        },
+        "e-rickshaw(toto)": {
+          "count": 147,
+          "ratio_to_car": 0.043
+        },
+        "person": {
+          "count": 131,
+          "ratio_to_car": 0.038
+        },
+        "vikram-auto": {
+          "count": 69,
+          "ratio_to_car": 0.02
+        },
+        "bicycle": {
+          "count": 14,
+          "ratio_to_car": 0.004
+        }
+      },
+      "direction_split": {
+        "IN": 5573,
+        "OUT": 4627
+      },
+      "region_breakdown": {
+        "RZ1_line_1": 2594,
+        "RZ1_zone_B": 776,
+        "RZ1_polygon_A": 3109,
+        "RZ1_up": 1845,
+        "RZ1_down": 1318,
+        "RZ1_zone_C": 558
+      },
+      "day_distribution": {
+        "2026-05-26": 5406,
+        "2026-05-27": 4794
+      },
+      "track_id_range": [
+        108841,
+        114265
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:02:29.618940",
+        "2026-05-27T23:57:24.490329"
+      ],
+      "avg_confidence": 0.5074
+    },
+    "ref_zone_7": {
+      "records_generated": 10200,
+      "class_balance": {
+        "auto": {
+          "count": 1114,
+          "ratio_to_car": 0.33
+        },
+        "car": {
+          "count": 3376,
+          "ratio_to_car": 1.0
+        },
+        "motorcycle": {
+          "count": 579,
+          "ratio_to_car": 0.172
+        },
+        "small-truck": {
+          "count": 316,
+          "ratio_to_car": 0.094
+        },
+        "motor-bike": {
+          "count": 1221,
+          "ratio_to_car": 0.362
+        },
+        "scooty": {
+          "count": 624,
+          "ratio_to_car": 0.185
+        },
+        "heavy-duty-truck": {
+          "count": 1170,
+          "ratio_to_car": 0.347
+        },
+        "vikram-auto": {
+          "count": 74,
+          "ratio_to_car": 0.022
+        },
+        "truck": {
+          "count": 1024,
+          "ratio_to_car": 0.303
+        },
+        "bicycle": {
+          "count": 26,
+          "ratio_to_car": 0.008
+        },
+        "bus": {
+          "count": 421,
+          "ratio_to_car": 0.125
+        },
+        "e-rickshaw(toto)": {
+          "count": 140,
+          "ratio_to_car": 0.041
+        },
+        "person": {
+          "count": 115,
+          "ratio_to_car": 0.034
+        }
+      },
+      "direction_split": {
+        "IN": 5576,
+        "OUT": 4624
+      },
+      "region_breakdown": {
+        "RZ7_zone_2": 1356,
+        "RZ7_polygon_A": 2983,
+        "RZ7_zone_1": 1845,
+        "RZ7_line_1": 2569,
+        "RZ7_zone_4": 592,
+        "RZ7_zone_3": 855
+      },
+      "day_distribution": {
+        "2026-05-26": 5406,
+        "2026-05-27": 4794
+      },
+      "track_id_range": [
+        117104,
+        123272
+      ],
+      "timestamp_range": [
+        "2026-05-26T00:10:07.824194",
+        "2026-05-27T23:57:57.223608"
+      ],
+      "avg_confidence": 0.5038
+    }
+  }
+}
