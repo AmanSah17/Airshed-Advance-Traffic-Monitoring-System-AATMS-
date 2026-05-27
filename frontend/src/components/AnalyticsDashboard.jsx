@@ -440,9 +440,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
           {/* Section pills */}
           {[
             { id:"overview", label:"Overview",   icon:BarChart3  },
-            { id:"nodes",    label:"Node Map",   icon:MapPin     },
-            { id:"density",  label:"Density",    icon:Flame      },
-            { id:"events",   label:"Event Logs", icon:Clock      },
+            { id:"density",  label:"Density",    icon:Flame      }
           ].map(s => (
             <button key={s.id} onClick={() => setActiveSection(s.id)} style={sectionBtnStyle(s.id)}>
               <s.icon style={{ width:12, height:12, display:"inline", marginRight:5, verticalAlign:"middle" }} />
@@ -1019,81 +1017,6 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── SECTION: EVENT LOGS TABLE ─────────────────────────── */}
-        {(activeSection === "events" || activeSection === "overview") && (
-          <div style={{ background:"rgba(15,23,42,0.6)", borderRadius:18, border:"1px solid rgba(30,41,59,0.6)",
-            padding:"18px 20px", marginBottom:16 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
-              <Clock style={{ width:15, height:15, color:"#ef4444" }} />
-              <span style={{ fontSize:12, fontWeight:700, color:"#cbd5e1" }}>Recent Crossing Events</span>
-              <span style={{ marginLeft:"auto", padding:"3px 10px", borderRadius:20, fontSize:10, fontWeight:700,
-                background:"rgba(239,68,68,0.1)", color:"#ef4444", border:"1px solid rgba(239,68,68,0.2)" }}>
-                {summary?.recent_logs?.length || 0} records
-              </span>
-            </div>
-            <div style={{ overflowY:"auto", maxHeight:300,
-              scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.2) transparent",
-              borderRadius:12, border:"1px solid rgba(30,41,59,0.6)" }}>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                <thead style={{ position:"sticky", top:0,
-                  background:"rgba(2,6,23,0.95)", backdropFilter:"blur(8px)" }}>
-                  <tr>
-                    {["#","Vehicle ID","Class","Direction","Confidence","Timestamp"].map(h => (
-                      <th key={h} style={{ padding:"10px 14px", textAlign:"left",
-                        color:"#475569", fontWeight:700, fontSize:10, textTransform:"uppercase",
-                        letterSpacing:"0.07em", borderBottom:"1px solid #1e293b" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(summary?.recent_logs || []).map((log, idx) => {
-                    const cfg = CLASS_CONFIG[log.class_name];
-                    return (
-                      <tr key={log.id} style={{
-                        borderBottom:"1px solid rgba(15,23,42,0.6)",
-                        background: idx%2===0?"transparent":"rgba(15,23,42,0.3)"
-                      }}>
-                        <td style={{ padding:"9px 14px", color:"#334155", fontFamily:"monospace", fontSize:11 }}>#{log.id}</td>
-                        <td style={{ padding:"9px 14px", color:"#e2e8f0", fontWeight:700 }}>{log.vehicle_id}</td>
-                        <td style={{ padding:"9px 14px" }}>
-                          <span style={{ display:"inline-flex", alignItems:"center", gap:5,
-                            padding:"3px 8px", borderRadius:8, fontSize:11, fontWeight:700,
-                            background: cfg?`${cfg.color}14`:"rgba(99,102,241,0.1)",
-                            color: cfg?.color || "#818cf8",
-                            border:`1px solid ${cfg?`${cfg.color}22`:"rgba(99,102,241,0.2)"}` }}>
-                            {cfg?.Icon && <cfg.Icon style={{ width:10, height:10 }} />}
-                            {log.class_name}
-                          </span>
-                        </td>
-                        <td style={{ padding:"9px 14px" }}>
-                          <span style={{ padding:"3px 10px", borderRadius:8, fontSize:10, fontWeight:800,
-                            background: log.direction==="IN"?"rgba(16,185,129,0.12)":"rgba(245,158,11,0.12)",
-                            color: log.direction==="IN"?"#10b981":"#f59e0b",
-                            border:`1px solid ${log.direction==="IN"?"rgba(16,185,129,0.25)":"rgba(245,158,11,0.25)"}` }}>
-                            {log.direction}
-                          </span>
-                        </td>
-                        <td style={{ padding:"9px 14px", fontFamily:"monospace", fontSize:11,
-                          color: log.confidence>0.8?"#10b981":log.confidence>0.5?"#f59e0b":"#ef4444" }}>
-                          {log.confidence ? `${(log.confidence*100).toFixed(1)}%` : "—"}
-                        </td>
-                        <td style={{ padding:"9px 14px", color:"#475569", fontSize:11 }}>
-                          {new Date(log.timestamp).toLocaleString()}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {(!summary?.recent_logs?.length) && (
-                    <tr><td colSpan={6} style={{ padding:"32px", textAlign:"center", color:"#334155", fontSize:13 }}>
-                      No crossing events recorded yet.
-                    </td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
