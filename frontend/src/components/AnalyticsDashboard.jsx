@@ -257,29 +257,37 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
     axios.get("https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m,weather_code,precipitation&timezone=auto")
       .then(res => setWeatherData(res.data.current)).catch(console.error);
     
-    axios.get(`${API_BASE}/analytics/heatmap`).then(res => {
-      setHeatmapCache(res.data);
-      const feats = res.data.features;
+    axios.get(`${API_BASE}/analytics/heatmap`).then(res => setHeatmapCache(res.data)).catch(console.error);
+
+    // Generate O-D Arcs between real camera nodes at 5-min intervals (288 steps)
+    axios.get(`${API_BASE}/cameras`).then(res => {
+      const cams = res.data;
       const arcs = [];
-      for(let i=0; i < Math.min(feats.length-1, 500); i+=2) {
-        arcs.push({
-          from: feats[i].geometry.coordinates,
-          to: feats[i+1].geometry.coordinates,
-          count: Math.random() * 500 + 50,
-          timeHour: Math.floor(Math.random() * 25)
-        });
+      for (let i = 0; i < cams.length; i++) {
+        for (let j = 0; j < cams.length; j++) {
+          if (i === j) continue;
+          // Generate realistic traffic flow pulses every 15 mins (3 steps)
+          for (let step = 0; step < 288; step += 3) {
+             arcs.push({
+               from: [cams[i].longitude, cams[i].latitude],
+               to: [cams[j].longitude, cams[j].latitude],
+               count: Math.random() * 150 + 20, // Flow volume
+               timeStep: step // 5-minute interval index
+             });
+          }
+        }
       }
       setArcCache(arcs);
     }).catch(console.error);
   }, []);
 
-  // ── Time Slider Animation ──
+  // ── Time Slider Animation (5-min intervals) ──
   useEffect(() => {
     let interval;
     if (isPlaying) {
       interval = setInterval(() => {
-        setTimeSlider(prev => (prev >= 24 ? 0 : prev + 1));
-      }, 1500);
+        setTimeSlider(prev => (prev >= 287 ? 0 : prev + 1));
+      }, 200); // Fast playback for 5-min intervals
     }
     return () => clearInterval(interval);
   }, [isPlaying]);
@@ -310,7 +318,8 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
     }
 
     if (showArcs && arcCache) {
-      const activeArcs = arcCache.filter(a => Math.abs(a.timeHour - timeSlider) <= 3);
+      // Show arcs within a 15-min window (3 steps of 5 mins)
+      const activeArcs = arcCache.filter(a => Math.abs(a.timeStep - timeSlider) <= 3);
       layers.push(new ArcLayer({
         id: 'arc-layer',
         data: activeArcs,
@@ -318,21 +327,40 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
         getTargetPosition: d => d.to,
         getSourceColor: [16,185,129],
         getTargetColor: [249,115,22],
-        getWidth: d => d.count / 100,
-        opacity: 0.6
+        getWidth: d => d.count / 20,
+        opacity: 0.8,
+        getTilt: d => 15
       }));
     }
 
     deckOverlayRef.current.setProps({ layers });
 
-    // Try to toggle 3D buildings if layer exists in style
-    try {
-        if (map.getLayer('building')) {
-           map.setPaintProperty('building', 'fill-extrusion-height', showBuildings ? ['get', 'render_height'] : 0);
-           map.setPaintProperty('building', 'fill-extrusion-base', showBuildings ? ['get', 'render_min_height'] : 0);
-           map.setPaintProperty('building', 'fill-extrusion-opacity', showBuildings ? 0.6 : 0);
+    // Robust 3D Buildings integration
+    if (showBuildings) {
+      if (!map.getLayer('3d-buildings-ext')) {
+        const sources = map.getStyle().sources;
+        const vectorSourceId = Object.keys(sources).find(k => sources[k].type === 'vector');
+        if (vectorSourceId) {
+          map.addLayer({
+            'id': '3d-buildings-ext',
+            'source': vectorSourceId,
+            'source-layer': 'building', // Standard openmaptiles layer
+            'type': 'fill-extrusion',
+            'minzoom': 14,
+            'paint': {
+              'fill-extrusion-color': '#1e293b',
+              'fill-extrusion-height': ['get', 'render_height'],
+              'fill-extrusion-base': ['get', 'render_min_height'],
+              'fill-extrusion-opacity': 0.8
+            }
+          });
         }
-    } catch (e) { console.log(e); }
+      }
+    } else {
+      if (map.getLayer('3d-buildings-ext')) {
+        map.removeLayer('3d-buildings-ext');
+      }
+    }
 
   }, [showHexbins, showArcs, showBuildings, timeSlider, mapReady, heatmapCache, arcCache]);
 
@@ -599,11 +627,13 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               </button>
               <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:700, marginBottom:4 }}>
-                  <span>0h (Yesterday)</span>
-                  <span style={{ color:"#818cf8", textTransform:"uppercase", letterSpacing:"0.05em" }}>Temporal Animation : Hour {timeSlider}</span>
-                  <span>24h (Now)</span>
+                  <span>00:00 (Yesterday)</span>
+                  <span style={{ color:"#818cf8", textTransform:"uppercase", letterSpacing:"0.05em" }}>
+                    Temporal Animation: {String(Math.floor((timeSlider * 5) / 60)).padStart(2, '0')}:{String((timeSlider * 5) % 60).padStart(2, '0')}
+                  </span>
+                  <span>24:00 (Now)</span>
                 </div>
-                <input type="range" min="0" max="24" value={timeSlider} onChange={e => setTimeSlider(parseInt(e.target.value))} 
+                <input type="range" min="0" max="287" value={timeSlider} onChange={e => setTimeSlider(parseInt(e.target.value))} 
                   style={{ width:"100%", accentColor:"#6366f1", cursor:"pointer" }} />
               </div>
             </div>
