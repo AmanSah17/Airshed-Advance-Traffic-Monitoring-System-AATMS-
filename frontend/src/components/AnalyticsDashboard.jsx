@@ -52,6 +52,7 @@ const CLASS_CONFIG = {
 };
 
 const DARK_STYLE  = "https://tiles.openfreemap.org/styles/dark";
+const LIGHT_STYLE = "https://tiles.openfreemap.org/styles/bright";
 const SATELLITE_STYLE = {
   version: 8,
   sources: {
@@ -142,7 +143,9 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
   const [summary,       setSummary]       = useState(null);
   const [allCamStats,   setAllCamStats]   = useState({});
   const [loading,       setLoading]       = useState(false);
-  const [mapMode,       setMapMode]       = useState("dark");
+  const [mapTheme,      setMapTheme]      = useState("dark");
+  const [showHeatmap,   setShowHeatmap]   = useState(true);
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [showZones,     setShowZones]     = useState(true);   // toggle polygon zone overlays
   const [visLayers,     setVisLayers]     = useState({
     car:true, truck:true, person:true, motorcycle:true, bus:true, bicycle:true
@@ -239,14 +242,14 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
   // ── Map ────────────────────────────────────────────────
   useEffect(() => {
     if (!mapContainer.current) return;
-    const style = mapMode === "dark" ? DARK_STYLE : SATELLITE_STYLE;
+    const style = mapTheme === "dark" ? DARK_STYLE : (mapTheme === "light" ? LIGHT_STYLE : SATELLITE_STYLE);
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style,
       center: DELHI_CENTER,
       zoom: DELHI_ZOOM,
-      pitch: mapMode === "dark" ? 45 : 0,
-      bearing: mapMode === "dark" ? -10 : 0,
+      pitch: mapTheme === "satellite" ? 0 : 45,
+      bearing: mapTheme === "satellite" ? 0 : -10,
       antialias: true
     });
     mapRef.current = map;
@@ -280,7 +283,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       }).catch(console.error);
 
       // ── Heatmap data (only when heatmap mode active) ──────
-      if (mapMode === "heatmap") {
+      if (showHeatmap) {
         axios.get(`${API_BASE}/analytics/heatmap`).then(res => {
           if (map.getSource("heat-src")) return;
           map.addSource("heat-src", { type:"geojson", data: res.data });
@@ -326,7 +329,7 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
     });
 
     return () => { setMapReady(false); map.remove(); };
-  }, [mapMode]);
+  }, [mapTheme, showHeatmap, showZones]);
 
   // ── Markers ───────────────────────────────────────────
   useEffect(() => {
@@ -462,6 +465,133 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
         flex:1, overflowY:"auto", overflowX:"hidden", padding:"20px 24px",
         scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent"
       }}>
+
+        
+        {/* ── HERO MAP SECTION ─────────────────────────────────── */}
+        <div style={{ marginBottom:24, display:"grid", gridTemplateColumns:"1fr 320px", gap:16 }}>
+          {/* Map canvas */}
+          <div style={{ borderRadius:18, overflow:"hidden", border:"1px solid rgba(30,41,59,0.8)",
+            height:560, position:"relative", boxShadow:"0 10px 30px rgba(0,0,0,0.5)" }}>
+            <div ref={mapContainer} style={{ width:"100%", height:"100%" }} />
+            
+            {/* Floating Map Layers Control */}
+            <div style={{ position:"absolute", top:16, right:16, zIndex:10 }}>
+              <div style={{ background:"rgba(15,23,42,0.85)", backdropFilter:"blur(8px)",
+                borderRadius:12, border:"1px solid rgba(99,102,241,0.4)",
+                padding:"8px", color:"#cbd5e1", display:"flex", flexDirection:"column", alignItems:"flex-end",
+                minWidth:140 }}>
+                <button onClick={() => setShowLayerMenu(!showLayerMenu)}
+                  style={{ background:"transparent", border:"none", color:"#f1f5f9", cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:6, fontWeight:700, fontSize:12 }}>
+                  <Layers style={{ width:16, height:16 }} />
+                  Map Layers
+                </button>
+                {showLayerMenu && (
+                  <div style={{ marginTop:12, display:"flex", flexDirection:"column", gap:10, alignItems:"flex-start", width:"100%", padding:"0 4px 4px 4px" }}>
+                    <div style={{ fontSize:10, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:800 }}>Base Map</div>
+                    {[
+                      { id:"dark", label:"OSM Dark" },
+                      { id:"light", label:"Light" },
+                      { id:"satellite", label:"Satellite" }
+                    ].map(t => (
+                      <label key={t.id} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:mapTheme===t.id?"#f1f5f9":"#94a3b8", fontWeight:mapTheme===t.id?700:500 }}>
+                        <input type="radio" name="mapTheme" value={t.id} checked={mapTheme===t.id}
+                          onChange={() => setMapTheme(t.id)}
+                          style={{ accentColor:"#6366f1", width:14, height:14 }} />
+                        {t.label}
+                      </label>
+                    ))}
+                    <div style={{ height:1, background:"rgba(255,255,255,0.1)", width:"100%", margin:"2px 0" }} />
+                    <div style={{ fontSize:10, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:800 }}>Data Overlays</div>
+                    <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showHeatmap?"#f1f5f9":"#94a3b8", fontWeight:showHeatmap?700:500 }}>
+                      <input type="checkbox" checked={showHeatmap} onChange={e => setShowHeatmap(e.target.checked)}
+                        style={{ accentColor:"#f59e0b", width:14, height:14 }} />
+                      <Flame style={{ width:12, height:12, color:"#f59e0b" }} /> Heatmap
+                    </label>
+                    <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, cursor:"pointer", color:showZones?"#f1f5f9":"#94a3b8", fontWeight:showZones?700:500 }}>
+                      <input type="checkbox" checked={showZones} onChange={e => setShowZones(e.target.checked)}
+                        style={{ accentColor:"#10b981", width:14, height:14 }} />
+                      <MapPin style={{ width:12, height:12, color:"#10b981" }} /> Polygon Zones
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!mapReady && (
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center",
+                justifyContent:"center", background:"rgba(2,6,23,0.8)", borderRadius:18 }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+                  <div style={{ width:32, height:32, borderRadius:"50%",
+                    border:"3px solid #6366f1", borderTopColor:"transparent",
+                    animation:"spin 0.8s linear infinite" }} />
+                  <span style={{ color:"#64748b", fontSize:13 }}>Loading map...</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Node sidebar */}
+          <div style={{ display:"flex", flexDirection:"column", gap:10, overflowY:"auto",
+            maxHeight:560, scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.2) transparent" }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase",
+              letterSpacing:"0.08em", paddingBottom:8, borderBottom:"1px solid #1e293b", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span>Camera Nodes ({cameras.length})</span>
+            </div>
+            {cameras.map(cam => {
+              const stats = allCamStats[cam.id];
+              const isActive = cam.id === selectedCam;
+              return (
+                <div key={cam.id}
+                  onClick={() => {
+                    setSelectedCam(cam.id);
+                    mapRef.current?.flyTo({ center:[cam.longitude,cam.latitude], zoom:16, pitch:mapTheme==="satellite"?0:60, speed:0.9 });
+                  }}
+                  style={{ padding:"12px 14px", borderRadius:14, cursor:"pointer",
+                    border:`1px solid ${isActive?"rgba(99,102,241,0.5)":"rgba(30,41,59,0.6)"}`,
+                    background: isActive?"rgba(99,102,241,0.08)":"rgba(15,23,42,0.4)",
+                    transition:"all 0.2s ease" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%",
+                      background: isActive?"#10b981":"#334155",
+                      boxShadow: isActive?"0 0 8px #10b98188":"none" }} />
+                    <span style={{ fontSize:13, fontWeight:700, color: isActive?"#f1f5f9":"#94a3b8" }}>
+                      {cam.name}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", marginBottom:8 }}>
+                    {cam.latitude?.toFixed(4)}, {cam.longitude?.toFixed(4)}
+                  </div>
+                  {stats && (
+                    <div style={{ display:"flex", gap:8 }}>
+                      <div style={{ flex:1, textAlign:"center", padding:"6px 4px", borderRadius:8,
+                        background:"rgba(99,102,241,0.1)", border:"1px solid rgba(99,102,241,0.15)" }}>
+                        <div style={{ fontSize:16, fontWeight:800, color:"#818cf8" }}>
+                          {stats.total_vehicles?.toLocaleString() || 0}
+                        </div>
+                        <div style={{ fontSize:9, color:"#475569", textTransform:"uppercase", fontWeight:600 }}>Total</div>
+                      </div>
+                      <div style={{ flex:1, textAlign:"center", padding:"6px 4px", borderRadius:8,
+                        background:"rgba(16,185,129,0.08)", border:"1px solid rgba(16,185,129,0.15)" }}>
+                        <div style={{ fontSize:16, fontWeight:800, color:"#10b981" }}>
+                          {stats.direction_distribution?.IN || 0}
+                        </div>
+                        <div style={{ fontSize:9, color:"#475569", textTransform:"uppercase", fontWeight:600 }}>IN</div>
+                      </div>
+                      <div style={{ flex:1, textAlign:"center", padding:"6px 4px", borderRadius:8,
+                        background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.15)" }}>
+                        <div style={{ fontSize:16, fontWeight:800, color:"#f59e0b" }}>
+                          {stats.direction_distribution?.OUT || 0}
+                        </div>
+                        <div style={{ fontSize:9, color:"#475569", textTransform:"uppercase", fontWeight:600 }}>OUT</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* ── TOP STAT CARDS ─────────────────────────────────────── */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:14, marginBottom:20 }}>
@@ -647,123 +777,6 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
               </div>
             </div>
           </>
-        )}
-
-        {/* ── SECTION: NODE MAP ─────────────────────────────────── */}
-        {(activeSection === "nodes" || activeSection === "density") && (
-          <div style={{ marginBottom:16 }}>
-            {/* Map Mode Toggles */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <span style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.08em" }}>
-                <Layers style={{ width:11, height:11, display:"inline", marginRight:4 }} />
-                Map Layer:
-              </span>
-              {[
-                { id:"dark",      label:"3D Dark",  Icon:Layers },
-                { id:"satellite", label:"Satellite", Icon:Globe  },
-                { id:"heatmap",   label:"Heatmap",   Icon:Flame  },
-              ].map(m => (
-                <LayerPill key={m.id}
-                  active={mapMode===m.id}
-                  color={mapMode===m.id ? "#6366f1" : "#334155"}
-                  Icon={m.Icon}
-                  label={m.label}
-                  onClick={() => setMapMode(m.id)}
-                />
-              ))}
-              {selectedCamera && (
-                <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:6,
-                  fontSize:12, color:"#64748b", fontWeight:600 }}>
-                  <MapPin style={{ width:13, height:13, color:"#6366f1" }} />
-                  {selectedCamera.name}
-                  <span style={{ color:"#334155" }}>·</span>
-                  <span style={{ fontFamily:"monospace", color:"#475569" }}>
-                    {selectedCamera.latitude?.toFixed(4)}, {selectedCamera.longitude?.toFixed(4)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:16 }}>
-              {/* Map canvas */}
-              <div style={{ borderRadius:18, overflow:"hidden", border:"1px solid rgba(30,41,59,0.8)",
-                height:420, position:"relative" }}>
-                <div ref={mapContainer} style={{ width:"100%", height:"100%" }} />
-                {!mapReady && (
-                  <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center",
-                    justifyContent:"center", background:"rgba(2,6,23,0.8)", borderRadius:18 }}>
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-                      <div style={{ width:32, height:32, borderRadius:"50%",
-                        border:"3px solid #6366f1", borderTopColor:"transparent",
-                        animation:"spin 0.8s linear infinite" }} />
-                      <span style={{ color:"#64748b", fontSize:13 }}>Loading map…</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Node sidebar */}
-              <div style={{ display:"flex", flexDirection:"column", gap:10, overflowY:"auto",
-                maxHeight:420, scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.2) transparent" }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase",
-                  letterSpacing:"0.08em", paddingBottom:8, borderBottom:"1px solid #1e293b" }}>
-                  Camera Nodes ({cameras.length})
-                </div>
-                {cameras.map(cam => {
-                  const stats = allCamStats[cam.id];
-                  const isActive = cam.id === selectedCam;
-                  return (
-                    <div key={cam.id}
-                      onClick={() => {
-                        setSelectedCam(cam.id);
-                        mapRef.current?.flyTo({ center:[cam.longitude,cam.latitude], zoom:16, pitch:60, speed:0.9 });
-                      }}
-                      style={{ padding:"12px 14px", borderRadius:14, cursor:"pointer",
-                        border:`1px solid ${isActive?"rgba(99,102,241,0.5)":"rgba(30,41,59,0.6)"}`,
-                        background: isActive?"rgba(99,102,241,0.08)":"rgba(15,23,42,0.4)",
-                        transition:"all 0.2s ease" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                        <div style={{ width:8, height:8, borderRadius:"50%",
-                          background: isActive?"#10b981":"#334155",
-                          boxShadow: isActive?"0 0 8px #10b98188":"none" }} />
-                        <span style={{ fontSize:13, fontWeight:700, color: isActive?"#f1f5f9":"#94a3b8" }}>
-                          {cam.name}
-                        </span>
-                      </div>
-                      <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", marginBottom:8 }}>
-                        {cam.latitude?.toFixed(4)}, {cam.longitude?.toFixed(4)}
-                      </div>
-                      {stats && (
-                        <div style={{ display:"flex", gap:8 }}>
-                          <div style={{ flex:1, textAlign:"center", padding:"6px 4px", borderRadius:8,
-                            background:"rgba(99,102,241,0.1)", border:"1px solid rgba(99,102,241,0.15)" }}>
-                            <div style={{ fontSize:16, fontWeight:800, color:"#818cf8" }}>
-                              {stats.total_vehicles?.toLocaleString() || 0}
-                            </div>
-                            <div style={{ fontSize:9, color:"#475569", textTransform:"uppercase", fontWeight:600 }}>Total</div>
-                          </div>
-                          <div style={{ flex:1, textAlign:"center", padding:"6px 4px", borderRadius:8,
-                            background:"rgba(16,185,129,0.08)", border:"1px solid rgba(16,185,129,0.15)" }}>
-                            <div style={{ fontSize:16, fontWeight:800, color:"#10b981" }}>
-                              {stats.direction_distribution?.IN || 0}
-                            </div>
-                            <div style={{ fontSize:9, color:"#475569", textTransform:"uppercase", fontWeight:600 }}>IN</div>
-                          </div>
-                          <div style={{ flex:1, textAlign:"center", padding:"6px 4px", borderRadius:8,
-                            background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.15)" }}>
-                            <div style={{ fontSize:16, fontWeight:800, color:"#f59e0b" }}>
-                              {stats.direction_distribution?.OUT || 0}
-                            </div>
-                            <div style={{ fontSize:9, color:"#475569", textTransform:"uppercase", fontWeight:600 }}>OUT</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
         )}
 
         {/* ── SECTION: MULTI-NODE COMPARISON ─────────────────────── */}
