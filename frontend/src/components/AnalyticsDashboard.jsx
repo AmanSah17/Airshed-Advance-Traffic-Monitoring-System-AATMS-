@@ -268,8 +268,6 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
       const cams = res.data;
       const arcs = [];
       
-      const nodesMap = {};
-      cams.forEach((c, idx) => { nodesMap[c.name] = idx; });
       const linksMap = {};
 
       for (let i = 0; i < cams.length; i++) {
@@ -288,12 +286,20 @@ export default function AnalyticsDashboard({ cameraId: propCameraId }) {
                timeStep: step
              });
           }
-          linksMap[`${i}->${j}`] = { source: i, target: j, value: Math.round(totalFlow) };
+          // To prevent Recharts Sankey infinite loop (cyclic links), we make the graph acyclic
+          // by mapping source nodes (index 0 to N-1) to target nodes (index N to 2N-1).
+          linksMap[`${i}->${j}`] = { source: i, target: j + cams.length, value: Math.round(totalFlow) };
         }
       }
       setArcCache(arcs);
+      
+      // Create bipartite nodes array
+      const sankeyNodes = [];
+      cams.forEach(c => sankeyNodes.push({ name: c.name + " (Origin)" }));
+      cams.forEach(c => sankeyNodes.push({ name: c.name + " (Dest)" }));
+
       setSankeyData({
-         nodes: cams.map(c => ({ name: c.name })),
+         nodes: sankeyNodes,
          links: Object.values(linksMap).filter(l => l.value > 0)
       });
 
